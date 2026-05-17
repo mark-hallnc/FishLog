@@ -31,6 +31,9 @@ fun StartTripScreen(
     onTripStarted: () -> Unit
 ) {
     val allTrips by viewModel.allTrips.collectAsState()
+    val existingWaterBodies = remember(allTrips) {
+        allTrips.map { it.waterBody }.distinct()
+    }
     
     var name by remember { mutableStateOf("") }
     var hasUserEditedName by remember { mutableStateOf(false) }
@@ -104,12 +107,11 @@ fun StartTripScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    OutlinedTextField(
+                    WaterBodyPicker(
                         value = waterBody,
                         onValueChange = { waterBody = it },
-                        label = { Text("Water Body (Lake, River, etc.)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        existingWaterBodies = existingWaterBodies,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = notes,

@@ -90,8 +90,34 @@ fun InsightsScreen(
                 MonthlyActivitySection(logs)
                 EnvironmentalSection(logs)
                 LocationCoverageSection(logs)
+                TopWaterBodiesSection(trips)
                 TripInsightsSection(logs, trips)
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun TopWaterBodiesSection(trips: List<FishingTrip>) {
+    val topWaterBodies = trips
+        .filter { it.waterBody.isNotBlank() }
+        .map { it.waterBody.trim() }
+        .groupBy { it.lowercase() }
+        .map { group ->
+            // Use the most frequent original casing for display
+            val originalCasing = group.value.groupBy { it }.maxBy { it.value.size }.key
+            originalCasing to group.value.size
+        }
+        .sortedByDescending { it.second }
+        .take(5)
+
+    InsightCard(title = "Top Water Bodies") {
+        if (topWaterBodies.isEmpty()) {
+            Text("Not enough data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            topWaterBodies.forEach { (waterBody, count) ->
+                RankingRow(waterBody, count, trips.size)
             }
         }
     }
