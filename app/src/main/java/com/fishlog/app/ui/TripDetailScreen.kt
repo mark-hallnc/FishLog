@@ -28,7 +28,9 @@ fun TripDetailScreen(
     trip: FishingTrip,
     viewModel: FishLogViewModel,
     onBack: () -> Unit,
-    onLogClick: (CatchLog) -> Unit
+    onLogClick: (CatchLog) -> Unit,
+    onLogCatch: () -> Unit = {},
+    onLogNoCatch: () -> Unit = {}
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val tripLogs = remember(catches, trip.id) {
@@ -85,6 +87,32 @@ fun TripDetailScreen(
             if (trip.endTime == null) {
                 var isEndingTrip by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onLogCatch,
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Log Catch")
+                    }
+                    Button(
+                        onClick = onLogNoCatch,
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.Default.Stop, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("No-Catch")
+                    }
+                }
 
                 Button(
                     onClick = {

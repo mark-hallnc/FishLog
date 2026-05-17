@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ fun NoCatchFormScreen(
     onBack: () -> Unit,
     editingLog: CatchLog? = null
 ) {
+    val activeTrip by viewModel.activeTrip.collectAsState()
     var waterTemp by remember { mutableStateOf(editingLog?.waterTemp ?: "") }
     var depth by remember { mutableStateOf(editingLog?.depth ?: "") }
     var bait by remember { mutableStateOf(editingLog?.bait ?: "") }
@@ -86,6 +88,45 @@ fun NoCatchFormScreen(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (activeTrip != null && editingLog == null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Column {
+                            Text(
+                                text = "Logging to active trip",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (activeTrip!!.waterBody.isNotBlank()) 
+                                    "${activeTrip!!.name} · ${activeTrip!!.waterBody}" 
+                                    else activeTrip!!.name,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            } else if (editingLog == null) {
+                Text(
+                    text = "Not attached to a trip",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+
             if (showConfirmation) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),

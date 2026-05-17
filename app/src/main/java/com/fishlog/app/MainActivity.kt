@@ -117,6 +117,14 @@ fun MainScreen(viewModel: FishLogViewModel) {
                     onLogClick = { catch ->
                         selectedCatch = catch
                         currentScreen = "Detail"
+                    },
+                    onLogCatch = {
+                        selectedCatch = null
+                        currentScreen = "Form"
+                    },
+                    onLogNoCatch = {
+                        selectedCatch = null
+                        currentScreen = "NoCatchForm"
                     }
                 )
             } ?: run { currentScreen = "Home" }
@@ -230,7 +238,9 @@ fun HomeScreen(
             onEndTrip = {
                 activeTrip?.let { viewModel.endTrip(it) }
             },
-            onViewTrip = { activeTrip?.let { onViewTripClick(it) } }
+            onViewTrip = { activeTrip?.let { onViewTripClick(it) } },
+            onLogCatch = onLogCatchClick,
+            onLogNoCatch = onLogNoCatchClick
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -307,7 +317,9 @@ fun TripStatusCard(
     activeTrip: FishingTrip?,
     onStartTrip: () -> Unit,
     onEndTrip: suspend () -> Unit,
-    onViewTrip: () -> Unit
+    onViewTrip: () -> Unit,
+    onLogCatch: () -> Unit = {},
+    onLogNoCatch: () -> Unit = {}
 ) {
     var isEndingTrip by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -385,6 +397,33 @@ fun TripStatusCard(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("End Trip")
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onLogCatch,
+                        modifier = Modifier.weight(1f),
+                        enabled = !isEndingTrip,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Log Catch")
+                    }
+                    Button(
+                        onClick = onLogNoCatch,
+                        modifier = Modifier.weight(1f),
+                        enabled = !isEndingTrip,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Default.Block, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("No-Catch")
                     }
                 }
             }
