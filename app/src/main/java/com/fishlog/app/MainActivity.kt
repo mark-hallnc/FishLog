@@ -29,6 +29,7 @@ import com.fishlog.app.ui.CatchDetailScreen
 import com.fishlog.app.ui.InsightsScreen
 import com.fishlog.app.ui.StartTripScreen
 import com.fishlog.app.ui.TripDetailScreen
+import com.fishlog.app.ui.TripHistoryScreen
 import com.fishlog.app.ui.BackupScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
@@ -95,6 +96,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 onInsightsClick = { currentScreen = "Insights" },
                 onBackupClick = { currentScreen = "Backup" },
                 onExportClick = { currentScreen = "Export" },
+                onTripHistoryClick = { currentScreen = "TripHistory" },
                 onStartTripClick = { currentScreen = "StartTrip" },
                 onViewTripClick = { trip ->
                     selectedTrip = trip
@@ -167,6 +169,15 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 viewModel = viewModel,
                 onBack = { currentScreen = "Home" }
             )
+            "TripHistory" -> TripHistoryScreen(
+                viewModel = viewModel,
+                onBack = { currentScreen = "Home" },
+                onTripClick = { trip ->
+                    selectedTrip = trip
+                    currentScreen = "TripDetail"
+                },
+                onStartTripClick = { currentScreen = "StartTrip" }
+            )
         }
     }
 }
@@ -181,6 +192,7 @@ fun HomeScreen(
     onInsightsClick: () -> Unit,
     onBackupClick: () -> Unit,
     onExportClick: () -> Unit,
+    onTripHistoryClick: () -> Unit,
     onStartTripClick: () -> Unit,
     onViewTripClick: (FishingTrip) -> Unit,
     modifier: Modifier = Modifier
@@ -270,6 +282,13 @@ fun HomeScreen(
                     title = "Backup",
                     icon = Icons.Default.CloudQueue,
                     onClick = onBackupClick
+                )
+            }
+            item {
+                HomeCard(
+                    title = "Trip History",
+                    icon = Icons.Default.ListAlt,
+                    onClick = onTripHistoryClick
                 )
             }
             item {
