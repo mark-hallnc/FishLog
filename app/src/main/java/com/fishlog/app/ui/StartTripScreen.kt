@@ -19,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,10 +30,20 @@ fun StartTripScreen(
     onBack: () -> Unit,
     onTripStarted: () -> Unit
 ) {
-    var name by remember { mutableStateOf("Fishing Trip") }
+    val allTrips by viewModel.allTrips.collectAsState()
+    
+    var name by remember { mutableStateOf("") }
+    var hasUserEditedName by remember { mutableStateOf(false) }
     var waterBody by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
+
+    // Generate default name once trips are available and if user hasn't edited
+    LaunchedEffect(allTrips) {
+        if (!hasUserEditedName) {
+            name = generateDefaultTripName(allTrips.map { it.name })
+        }
+    }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -83,7 +96,10 @@ fun StartTripScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { 
+                            name = it
+                            hasUserEditedName = true
+                        },
                         label = { Text("Trip Name") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -171,5 +187,20 @@ fun StartTripScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+fun generateDefaultTripName(existingNames: List<String>): String {
+    val dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
+    val baseName = dateFormat.format(Date())
+    
+    if (!existingNames.contains(baseName)) {
+        return baseName
+    }
+    
+    var counter = 1
+    while (existingNames.contains("$baseName-$counter")) {
+        counter++
+    }
+    return "$baseName-$counter"
 }
 
