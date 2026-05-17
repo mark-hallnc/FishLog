@@ -38,7 +38,18 @@ class FishLogViewModel(
             initialValue = null
         )
 
-    fun startTrip(name: String, waterBody: String, notes: String, latitude: Double?, longitude: Double?) {
+    fun startTrip(
+        name: String,
+        waterBody: String,
+        notes: String,
+        latitude: Double?,
+        longitude: Double?,
+        skyCondition: String = "",
+        windCondition: String = "",
+        airTempF: Double? = null,
+        waterClarity: String = "",
+        pressureTrend: String = ""
+    ) {
         viewModelScope.launch {
             val trip = FishingTrip(
                 name = name,
@@ -46,7 +57,12 @@ class FishLogViewModel(
                 startTime = System.currentTimeMillis(),
                 notes = notes,
                 latitude = latitude,
-                longitude = longitude
+                longitude = longitude,
+                skyCondition = skyCondition,
+                windCondition = windCondition,
+                airTempF = airTempF,
+                waterClarity = waterClarity,
+                pressureTrend = pressureTrend
             )
             fishingTripDao.insertTrip(trip)
         }

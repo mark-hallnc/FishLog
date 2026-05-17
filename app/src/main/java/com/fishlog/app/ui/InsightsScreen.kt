@@ -137,6 +137,18 @@ fun TripInsightsSection(logs: List<CatchLog>, trips: List<FishingTrip>) {
             StatItem("Total Trips", totalTrips.toString(), Modifier.weight(1f))
             StatItem("Avg Catch/Trip", String.format("%.1f", avgCatches), Modifier.weight(1f))
         }
+        
+        val tripsWithConditions = trips.count { 
+            it.skyCondition.isNotBlank() || it.windCondition.isNotBlank() || it.airTempF != null 
+        }
+        if (tripsWithConditions > 0) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "$tripsWithConditions trips have conditions recorded",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
     }
 }
 

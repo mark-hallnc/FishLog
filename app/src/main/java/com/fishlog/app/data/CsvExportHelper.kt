@@ -7,7 +7,7 @@ import java.util.Locale
 object CsvExportHelper {
 
     fun convertToCsv(catches: List<CatchLog>, trips: List<FishingTrip> = emptyList()): String {
-        val header = "id,logType,tripId,tripName,species,length,lengthInches,weight,weightLbs,waterTemp,waterTempF,depth,depthFeet,bait,notes,latitude,longitude,photoUri,timestamp,dateTimeReadable"
+        val header = "id,logType,tripId,tripName,tripWaterBody,tripSkyCondition,tripWindCondition,tripAirTempF,tripWaterClarity,tripPressureTrend,species,length,lengthInches,weight,weightLbs,waterTemp,waterTempF,depth,depthFeet,bait,notes,latitude,longitude,photoUri,timestamp,dateTimeReadable"
         val csvBuilder = StringBuilder()
         csvBuilder.append(header).append("\n")
 
@@ -20,6 +20,12 @@ object CsvExportHelper {
                 catch.logType,
                 catch.tripId?.toString() ?: "",
                 escapeCsv(trip?.name ?: ""),
+                escapeCsv(trip?.waterBody ?: ""),
+                escapeCsv(trip?.skyCondition ?: ""),
+                escapeCsv(trip?.windCondition ?: ""),
+                trip?.airTempF?.toString() ?: "",
+                escapeCsv(trip?.waterClarity ?: ""),
+                escapeCsv(trip?.pressureTrend ?: ""),
                 escapeCsv(catch.species),
                 escapeCsv(catch.length),
                 catch.lengthInches?.toString() ?: "",

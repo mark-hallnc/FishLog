@@ -41,6 +41,17 @@ fun StartTripScreen(
     var notes by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
 
+    var skyCondition by remember { mutableStateOf("") }
+    var windCondition by remember { mutableStateOf("") }
+    var airTemp by remember { mutableStateOf("") }
+    var waterClarity by remember { mutableStateOf("") }
+    var pressureTrend by remember { mutableStateOf("") }
+
+    val skyOptions = listOf("Clear", "Partly Cloudy", "Cloudy", "Rain", "Storms", "Fog", "Other")
+    val windOptions = listOf("Calm", "Light", "Moderate", "Strong", "Gusty")
+    val clarityOptions = listOf("Clear", "Stained", "Muddy", "Murky", "Other")
+    val pressureOptions = listOf("Rising", "Falling", "Steady", "Unknown")
+
     // Generate default name once trips are available and if user hasn't edited
     LaunchedEffect(allTrips) {
         if (!hasUserEditedName) {
@@ -127,6 +138,61 @@ fun StartTripScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Conditions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DropdownFilter(
+                            label = "Sky",
+                            selectedOption = skyCondition.ifBlank { "Select Sky" },
+                            options = skyOptions,
+                            onOptionSelected = { skyCondition = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DropdownFilter(
+                            label = "Wind",
+                            selectedOption = windCondition.ifBlank { "Select Wind" },
+                            options = windOptions,
+                            onOptionSelected = { windCondition = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = airTemp,
+                            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) airTemp = it },
+                            label = { Text("Air Temp (°F)") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        )
+                        DropdownFilter(
+                            label = "Clarity",
+                            selectedOption = waterClarity.ifBlank { "Select Clarity" },
+                            options = clarityOptions,
+                            onOptionSelected = { waterClarity = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    DropdownFilter(
+                        label = "Pressure Trend",
+                        selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
+                        options = pressureOptions,
+                        onOptionSelected = { pressureTrend = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Row(
@@ -163,7 +229,18 @@ fun StartTripScreen(
                                 lat = loc?.latitude
                                 lon = loc?.longitude
                             }
-                            viewModel.startTrip(name, waterBody, notes, lat, lon)
+                            viewModel.startTrip(
+                                name = name,
+                                waterBody = waterBody,
+                                notes = notes,
+                                latitude = lat,
+                                longitude = lon,
+                                skyCondition = skyCondition,
+                                windCondition = windCondition,
+                                airTempF = airTemp.toDoubleOrNull(),
+                                waterClarity = waterClarity,
+                                pressureTrend = pressureTrend
+                            )
                             onTripStarted()
                         } finally {
                             isSaving = false

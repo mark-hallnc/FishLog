@@ -20,6 +20,11 @@ data class FishingTrip(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val deletedAt: Long? = null,
-    val backupStatus: String = BackupStatus.PENDING_BACKUP
+    val backupStatus: String = BackupStatus.PENDING_BACKUP,
+    val skyCondition: String = "",
+    val windCondition: String = "",
+    val airTempF: Double? = null,
+    val waterClarity: String = "",
+    val pressureTrend: String = ""
 )
 

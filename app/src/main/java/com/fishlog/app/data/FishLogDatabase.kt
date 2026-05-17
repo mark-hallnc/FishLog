@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CatchLog::class, FishingTrip::class], version = 6, exportSchema = false)
+@Database(entities = [CatchLog::class, FishingTrip::class], version = 7, exportSchema = false)
 abstract class FishLogDatabase : RoomDatabase() {
     abstract fun catchLogDao(): CatchLogDao
     abstract fun fishingTripDao(): FishingTripDao
@@ -83,10 +83,20 @@ abstract class FishLogDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN skyCondition TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN windCondition TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN airTempF REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN waterClarity TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN pressureTrend TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getDatabase(context: Context): FishLogDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, FishLogDatabase::class.java, "fishlog_database")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .build()
                     .also { Instance = it }
             }

@@ -219,6 +219,23 @@ fun TripHistoryCard(
 
             Spacer(modifier = Modifier.height(12.dp))
             
+            val conditions = remember(trip) {
+                listOfNotNull(
+                    trip.skyCondition.ifBlank { null },
+                    trip.windCondition.ifBlank { null },
+                    trip.airTempF?.let { "${it.toInt()}°F" }
+                ).joinToString(" · ")
+            }
+            
+            if (conditions.isNotBlank()) {
+                Text(
+                    text = conditions,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text("Started", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)

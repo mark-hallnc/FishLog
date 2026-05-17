@@ -130,6 +130,29 @@ fun TripDetailScreen(
                 }
             }
 
+            if (trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank() || 
+                trip.airTempF != null || trip.waterClarity.isNotBlank() || trip.pressureTrend.isNotBlank()) {
+                InsightCard(title = "Conditions") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank()) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                if (trip.skyCondition.isNotBlank()) StatItem("Sky", trip.skyCondition, Modifier.weight(1f))
+                                if (trip.windCondition.isNotBlank()) StatItem("Wind", trip.windCondition, Modifier.weight(1f))
+                            }
+                        }
+                        if (trip.airTempF != null || trip.waterClarity.isNotBlank()) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                if (trip.airTempF != null) StatItem("Air Temp", "${trip.airTempF}°F", Modifier.weight(1f))
+                                if (trip.waterClarity.isNotBlank()) StatItem("Clarity", trip.waterClarity, Modifier.weight(1f))
+                            }
+                        }
+                        if (trip.pressureTrend.isNotBlank()) {
+                            StatItem("Pressure", trip.pressureTrend, Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            }
+
             if (trip.notes.isNotBlank()) {
                 InsightCard(title = "Notes") {
                     Text(trip.notes, style = MaterialTheme.typography.bodyLarge)
