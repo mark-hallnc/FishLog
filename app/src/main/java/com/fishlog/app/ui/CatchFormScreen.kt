@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
+import com.fishlog.app.ui.RecentValueChips
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
 
@@ -49,6 +50,34 @@ fun CatchFormScreen(
     val activeTrip by viewModel.activeTrip.collectAsState()
     val existingSpecies = remember(catches) {
         catches.map { it.species }.distinct().sorted()
+    }
+
+    val recentSpecies = remember(catches) {
+        catches.filter { it.logType == "CATCH" && it.species.isNotBlank() }
+            .map { it.species }
+            .distinct()
+            .take(6)
+    }
+
+    val recentBaits = remember(catches) {
+        catches.filter { it.bait.isNotBlank() }
+            .map { it.bait.trim() }
+            .distinctBy { it.lowercase() }
+            .take(6)
+    }
+
+    val recentDepths = remember(catches) {
+        catches.mapNotNull { it.depth.trim().ifBlank { it.depthFeet?.toString() } }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .take(5)
+    }
+
+    val recentTemps = remember(catches) {
+        catches.mapNotNull { it.waterTemp.trim().ifBlank { it.waterTempF?.toString() } }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .take(5)
     }
 
     var length by remember { mutableStateOf(editingCatch?.length ?: "") }
@@ -234,6 +263,12 @@ fun CatchFormScreen(
                             Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
 
+                        RecentValueChips(
+                            values = recentSpecies,
+                            onValueSelected = { species = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedTextField(
                                 value = length,
@@ -331,31 +366,52 @@ fun CatchFormScreen(
                         Text("Conditions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(
-                                value = waterTemp,
-                                onValueChange = { waterTemp = it },
-                                label = { Text("Water Temp (°F)") },
-                                modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            OutlinedTextField(
-                                value = depth,
-                                onValueChange = { depth = it },
-                                label = { Text("Depth (ft)") },
-                                modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                shape = RoundedCornerShape(12.dp)
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = waterTemp,
+                                    onValueChange = { waterTemp = it },
+                                    label = { Text("Water Temp (°F)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                RecentValueChips(
+                                    values = recentTemps.map { "$it°F" },
+                                    onValueSelected = { waterTemp = it.removeSuffix("°F") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = depth,
+                                    onValueChange = { depth = it },
+                                    label = { Text("Depth (ft)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                RecentValueChips(
+                                    values = recentDepths.map { "$it ft" },
+                                    onValueSelected = { depth = it.removeSuffix(" ft") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                         
-                        OutlinedTextField(
-                            value = bait,
-                            onValueChange = { bait = it },
-                            label = { Text("Bait or Lure") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                        Column {
+                            OutlinedTextField(
+                                value = bait,
+                                onValueChange = { bait = it },
+                                label = { Text("Bait or Lure") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            RecentValueChips(
+                                values = recentBaits,
+                                onValueSelected = { bait = it },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                         
                         OutlinedTextField(
                             value = notes,
