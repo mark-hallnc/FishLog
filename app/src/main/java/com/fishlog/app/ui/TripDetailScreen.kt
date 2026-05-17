@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
@@ -82,15 +83,41 @@ fun TripDetailScreen(
             }
 
             if (trip.endTime == null) {
+                var isEndingTrip by remember { mutableStateOf(false) }
+                val scope = rememberCoroutineScope()
+
                 Button(
-                    onClick = { viewModel.endTrip(trip) },
+                    onClick = {
+                        if (isEndingTrip) return@Button
+                        isEndingTrip = true
+                        scope.launch {
+                            try {
+                                viewModel.endTrip(trip)
+                                onBack() // Navigate back after success
+                            } catch (e: Exception) {
+                                isEndingTrip = false
+                                // Optional: Show error
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    enabled = !isEndingTrip
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("End Trip", style = MaterialTheme.typography.titleMedium)
+                    if (isEndingTrip) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onError,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Ending Trip...", style = MaterialTheme.typography.titleMedium)
+                    } else {
+                        Icon(Icons.Default.Stop, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("End Trip", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
 

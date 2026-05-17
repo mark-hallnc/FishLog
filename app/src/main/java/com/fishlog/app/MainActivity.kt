@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.map.MapScreen
 import com.fishlog.app.ui.CatchFormScreen
@@ -214,8 +215,10 @@ fun HomeScreen(
         TripStatusCard(
             activeTrip = activeTrip,
             onStartTrip = onStartTripClick,
-            onEndTrip = { viewModel.endTrip(activeTrip!!) },
-            onViewTrip = { onViewTripClick(activeTrip!!) }
+            onEndTrip = {
+                activeTrip?.let { viewModel.endTrip(it) }
+            },
+            onViewTrip = { activeTrip?.let { onViewTripClick(it) } }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -284,9 +287,19 @@ fun HomeScreen(
 fun TripStatusCard(
     activeTrip: FishingTrip?,
     onStartTrip: () -> Unit,
-    onEndTrip: () -> Unit,
+    onEndTrip: suspend () -> Unit,
     onViewTrip: () -> Unit
 ) {
+    var isEndingTrip by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    
+    // Reset isEndingTrip when activeTrip changes (e.g. when it becomes null)
+    LaunchedEffect(activeTrip == null) {
+        if (activeTrip == null) {
+            isEndingTrip = false
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
@@ -319,20 +332,40 @@ fun TripStatusCard(
                     OutlinedButton(
                         onClick = onViewTrip,
                         modifier = Modifier.weight(1f),
+                        enabled = !isEndingTrip,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                     ) {
                         Text("View Details")
                     }
                     Button(
-                        onClick = onEndTrip,
+                        onClick = {
+                            if (isEndingTrip) return@Button
+                            scope.launch {
+                                isEndingTrip = true
+                                try {
+                                    onEndTrip()
+                                } catch (e: Exception) {
+                                    isEndingTrip = false
+                                }
+                            }
+                        },
                         modifier = Modifier.weight(1f),
+                        enabled = !isEndingTrip,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Icon(Icons.Default.Stop, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("End Trip")
+                        if (isEndingTrip) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onError,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Stop, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("End Trip")
+                        }
                     }
                 }
             }

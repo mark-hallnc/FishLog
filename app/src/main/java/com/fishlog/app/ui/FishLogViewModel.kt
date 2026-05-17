@@ -52,10 +52,8 @@ class FishLogViewModel(
         }
     }
 
-    fun endTrip(trip: FishingTrip) {
-        viewModelScope.launch {
-            fishingTripDao.updateTrip(trip.copy(endTime = System.currentTimeMillis(), updatedAt = System.currentTimeMillis()))
-        }
+    suspend fun endTrip(trip: FishingTrip) {
+        fishingTripDao.updateTrip(trip.copy(endTime = System.currentTimeMillis(), updatedAt = System.currentTimeMillis()))
     }
 
     fun updateTrip(trip: FishingTrip) {
