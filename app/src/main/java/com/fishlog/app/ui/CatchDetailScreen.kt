@@ -2,6 +2,7 @@ package com.fishlog.app.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +36,8 @@ fun CatchDetailScreen(
     unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onViewOnMap: (CatchLog) -> Unit = {}
 ) {
     val context = LocalContext.current
     val isMetric = unitSystem == AppPreferences.UNITS_METRIC
@@ -191,20 +194,48 @@ fun CatchDetailScreen(
                 }
             }
 
+            val hasLocation = catch.latitude != null && catch.longitude != null
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (hasLocation) Modifier.clickable { onViewOnMap(catch) } else Modifier),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Location", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
-                    val location = if (catch.latitude != null && catch.longitude != null) {
-                        "${String.format("%.6f", catch.latitude)}, ${String.format("%.6f", catch.longitude)}"
+                    Text(
+                        text = "Location",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    if (hasLocation) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "View on Map",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "${String.format("%.6f", catch.latitude)}, ${String.format("%.6f", catch.longitude)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
                     } else {
-                        "Not saved"
+                        Text(text = "Not saved", style = MaterialTheme.typography.bodyLarge)
                     }
-                    Text(text = location, style = MaterialTheme.typography.bodyLarge)
                 }
             }
 

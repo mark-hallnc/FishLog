@@ -62,14 +62,16 @@ fun StartTripScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val locationService = remember { LocationService(context) }
-    var saveLocation by remember { mutableStateOf(false) }
+    
+    var saveLocation by remember { mutableStateOf(locationService.hasLocationPermission()) }
+    var hasUserChangedSaveLocation by remember { mutableStateOf(false) }
     var hasPermission by remember { mutableStateOf(locationService.hasLocationPermission()) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         hasPermission = permissions.values.any { it }
-        if (hasPermission) {
+        if (hasPermission && !hasUserChangedSaveLocation) {
             saveLocation = true
         }
     }
@@ -205,7 +207,13 @@ fun StartTripScreen(
                         Text(if (hasPermission) "Use current coordinates" else "Permissions needed", style = MaterialTheme.typography.bodySmall)
                     }
                     if (hasPermission) {
-                        Switch(checked = saveLocation, onCheckedChange = { saveLocation = it })
+                        Switch(
+                            checked = saveLocation,
+                            onCheckedChange = { 
+                                saveLocation = it
+                                hasUserChangedSaveLocation = true
+                            }
+                        )
                     } else {
                         Button(onClick = {
                             permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))

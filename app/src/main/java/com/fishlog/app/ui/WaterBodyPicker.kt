@@ -1,9 +1,11 @@
 package com.fishlog.app.ui
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +50,8 @@ fun WaterBodyPicker(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(),
-            singleLine = true
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
         )
 
         if (expanded && filteredSuggestions.isNotEmpty()) {

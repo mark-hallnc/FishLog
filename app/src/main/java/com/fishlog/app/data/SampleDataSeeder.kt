@@ -256,6 +256,336 @@ object SampleDataSeeder {
             timestamp = calendar.timeInMillis
         ))
 
+        // --- NEW REALISTIC SAMPLES ---
+
+        // 7. Lake Moultrie, SC - Catfish & Bass (June 2026)
+        calendar.set(2026, Calendar.JUNE, 12, 8, 30)
+        val start7 = calendar.timeInMillis
+        val tripId7 = fishingTripDao.insertTrip(FishingTrip(
+            localUuid = "${UUID_PREFIX}trip-7",
+            name = "Moultrie Monsters",
+            waterBody = "Lake Moultrie, SC",
+            startTime = start7,
+            endTime = start7 + 14400000, // 4 hours
+            notes = "Deep drop-offs. $SAMPLE_MARKER",
+            latitude = 33.25,
+            longitude = -80.05,
+            skyCondition = "Partly Cloudy",
+            windCondition = "Light",
+            airTempF = 78.0,
+            waterClarity = "Stained"
+        ))
+
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-7-1",
+            species = "Blue Catfish",
+            length = "38", weight = "28.5",
+            waterTemp = "72", depth = "25",
+            lengthInches = 38.0, weightLbs = 28.5,
+            waterTempF = 72.0, depthFeet = 25.0,
+            tripId = tripId7, bait = "cut shad",
+            notes = "Big fight! $SAMPLE_MARKER",
+            latitude = 33.255, longitude = -80.055,
+            timestamp = start7 + 3600000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-7-2",
+            species = "Channel Catfish",
+            length = "20", weight = "5.0",
+            waterTemp = "74", depth = "15",
+            lengthInches = 20.0, weightLbs = 5.0,
+            waterTempF = 74.0, depthFeet = 15.0,
+            tripId = tripId7, bait = "chicken",
+            notes = SAMPLE_MARKER,
+            latitude = 33.256, longitude = -80.056,
+            timestamp = start7 + 7200000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-7-3",
+            species = "Largemouth Bass",
+            length = "21", weight = "5.8",
+            waterTemp = "72", depth = "8",
+            lengthInches = 21.0, weightLbs = 5.8,
+            waterTempF = 72.0, depthFeet = 8.0,
+            tripId = tripId7, bait = "jig",
+            notes = SAMPLE_MARKER,
+            latitude = 33.257, longitude = -80.057,
+            timestamp = start7 + 9000000
+        ))
+
+        // 8. Lake Okeechobee, FL - Bass Heaven (April 2026)
+        calendar.set(2026, Calendar.APRIL, 22, 6, 0)
+        val start8 = calendar.timeInMillis
+        val tripId8 = fishingTripDao.insertTrip(FishingTrip(
+            localUuid = "${UUID_PREFIX}trip-8",
+            name = "The Big O",
+            waterBody = "Lake Okeechobee, FL",
+            startTime = start8,
+            endTime = start8 + 18000000,
+            notes = "Grass mats and shiners. $SAMPLE_MARKER",
+            latitude = 26.95,
+            longitude = -80.80,
+            skyCondition = "Clear",
+            windCondition = "Light",
+            airTempF = 74.0,
+            waterClarity = "Clear"
+        ))
+
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-8-1",
+            species = "Largemouth Bass",
+            length = "24", weight = "8.2",
+            waterTemp = "76", depth = "3",
+            lengthInches = 24.0, weightLbs = 8.2,
+            waterTempF = 76.0, depthFeet = 3.0,
+            tripId = tripId8, bait = "shiner",
+            notes = "Personal best! $SAMPLE_MARKER",
+            latitude = 26.951, longitude = -80.801,
+            timestamp = start8 + 1800000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-8-2",
+            species = "Largemouth Bass",
+            length = "19", weight = "4.1",
+            waterTemp = "76", depth = "2",
+            lengthInches = 19.0, weightLbs = 4.1,
+            waterTempF = 76.0, depthFeet = 2.0,
+            tripId = tripId8, bait = "shiner",
+            notes = SAMPLE_MARKER,
+            latitude = 26.952, longitude = -80.802,
+            timestamp = start8 + 3600000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-8-3",
+            species = "Largemouth Bass",
+            length = "22", weight = "6.5",
+            waterTemp = "77", depth = "4",
+            lengthInches = 22.0, weightLbs = 6.5,
+            waterTempF = 77.0, depthFeet = 4.0,
+            tripId = tripId8, bait = "soft plastic",
+            notes = SAMPLE_MARKER,
+            latitude = 26.953, longitude = -80.803,
+            timestamp = start8 + 7200000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-8-4",
+            species = "Bluegill",
+            length = "9", weight = "0.6",
+            waterTemp = "78", depth = "2",
+            lengthInches = 9.0, weightLbs = 0.6,
+            waterTempF = 78.0, depthFeet = 2.0,
+            tripId = tripId8, bait = "worm",
+            notes = SAMPLE_MARKER,
+            latitude = 26.954, longitude = -80.804,
+            timestamp = start8 + 9000000
+        ))
+
+        // 9. Lake Marion, SC - Santee Striper (November 2025)
+        calendar.set(2025, Calendar.NOVEMBER, 12, 7, 0)
+        val start9 = calendar.timeInMillis
+        val tripId9 = fishingTripDao.insertTrip(FishingTrip(
+            localUuid = "${UUID_PREFIX}trip-9",
+            name = "Marion Stripers",
+            waterBody = "Lake Marion, SC",
+            startTime = start9,
+            endTime = start9 + 14400000,
+            notes = "Chasing gulls. $SAMPLE_MARKER",
+            latitude = 33.50,
+            longitude = -80.45,
+            skyCondition = "Cloudy",
+            windCondition = "Moderate",
+            airTempF = 52.0,
+            waterClarity = "Stained"
+        ))
+
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-9-1",
+            species = "Striped Bass",
+            length = "28", weight = "10.5",
+            waterTemp = "54", depth = "18",
+            lengthInches = 28.0, weightLbs = 10.5,
+            waterTempF = 54.0, depthFeet = 18.0,
+            tripId = tripId9, bait = "cut herring",
+            notes = SAMPLE_MARKER,
+            latitude = 33.501, longitude = -80.451,
+            timestamp = start9 + 3600000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-9-2",
+            species = "Striped Bass",
+            length = "22", weight = "5.0",
+            waterTemp = "54", depth = "22",
+            lengthInches = 22.0, weightLbs = 5.0,
+            waterTempF = 54.0, depthFeet = 22.0,
+            tripId = tripId9, bait = "cut herring",
+            notes = SAMPLE_MARKER,
+            latitude = 33.502, longitude = -80.452,
+            timestamp = start9 + 5400000
+        ))
+
+        // 10. Lake Norman, NC - Spotted Bass (February 2026)
+        calendar.set(2026, Calendar.FEBRUARY, 18, 10, 0)
+        val start10 = calendar.timeInMillis
+        val tripId10 = fishingTripDao.insertTrip(FishingTrip(
+            localUuid = "${UUID_PREFIX}trip-10",
+            name = "Norman Spots",
+            waterBody = "Lake Norman, NC",
+            startTime = start10,
+            endTime = start10 + 10800000,
+            notes = "Winter deep bite. $SAMPLE_MARKER",
+            latitude = 35.48,
+            longitude = -80.93,
+            skyCondition = "Clear",
+            windCondition = "Calm",
+            airTempF = 42.0,
+            waterClarity = "Clear"
+        ))
+
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-10-1",
+            species = "Spotted Bass",
+            length = "16", weight = "2.4",
+            waterTemp = "44", depth = "35",
+            lengthInches = 16.0, weightLbs = 2.4,
+            waterTempF = 44.0, depthFeet = 35.0,
+            tripId = tripId10, bait = "dropshot worm",
+            notes = SAMPLE_MARKER,
+            latitude = 35.481, longitude = -80.931,
+            timestamp = start10 + 3600000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}nocatch-10-1",
+            logType = "NO_CATCH", species = "No Catch",
+            length = "", weight = "",
+            waterTemp = "44", depth = "40",
+            waterTempF = 44.0, depthFeet = 40.0,
+            tripId = tripId10, bait = "dropshot worm",
+            notes = "Marked fish but wouldn't bite. $SAMPLE_MARKER",
+            latitude = 35.482, longitude = -80.932,
+            timestamp = start10 + 7200000
+        ))
+
+        // 11. Toledo Bend / Sam Rayburn - Texas Giants (May 2026)
+        calendar.set(2026, Calendar.MAY, 25, 6, 30)
+        val start11 = calendar.timeInMillis
+        val tripId11 = fishingTripDao.insertTrip(FishingTrip(
+            localUuid = "${UUID_PREFIX}trip-11",
+            name = "Texas Lunkers",
+            waterBody = "Toledo Bend, TX/LA",
+            startTime = start11,
+            endTime = start11 + 21600000, // 6 hours
+            notes = "Post-spawn timber. $SAMPLE_MARKER",
+            latitude = 31.20,
+            longitude = -93.58,
+            skyCondition = "Cloudy",
+            windCondition = "Light",
+            airTempF = 82.0,
+            waterClarity = "Muddy"
+        ))
+
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-11-1",
+            species = "Largemouth Bass",
+            length = "23", weight = "7.4",
+            waterTemp = "79", depth = "6",
+            lengthInches = 23.0, weightLbs = 7.4,
+            waterTempF = 79.0, depthFeet = 6.0,
+            tripId = tripId11, bait = "Texas rig worm",
+            notes = SAMPLE_MARKER,
+            latitude = 31.201, longitude = -93.581,
+            timestamp = start11 + 3600000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-11-2",
+            species = "Largemouth Bass",
+            length = "20", weight = "5.2",
+            waterTemp = "79", depth = "10",
+            lengthInches = 20.0, weightLbs = 5.2,
+            waterTempF = 79.0, depthFeet = 10.0,
+            tripId = tripId11, bait = "jig",
+            notes = SAMPLE_MARKER,
+            latitude = 31.202, longitude = -93.582,
+            timestamp = start11 + 7200000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-11-3",
+            species = "Crappie",
+            length = "14", weight = "1.8",
+            waterTemp = "79", depth = "12",
+            lengthInches = 14.0, weightLbs = 1.8,
+            waterTempF = 79.0, depthFeet = 12.0,
+            tripId = tripId11, bait = "brush pile minnow",
+            notes = SAMPLE_MARKER,
+            latitude = 31.203, longitude = -93.583,
+            timestamp = start11 + 10800000
+        ))
+
+        // 12. Kerr Lake, NC/VA - Spring Stripers (April 2026)
+        calendar.set(2026, Calendar.APRIL, 10, 8, 0)
+        val start12 = calendar.timeInMillis
+        val tripId12 = fishingTripDao.insertTrip(FishingTrip(
+            localUuid = "${UUID_PREFIX}trip-12",
+            name = "Kerr Stripers",
+            waterBody = "Kerr Lake, NC/VA",
+            startTime = start12,
+            endTime = start12 + 14400000,
+            notes = "River run. $SAMPLE_MARKER",
+            latitude = 36.52,
+            longitude = -78.30,
+            skyCondition = "Partly Cloudy",
+            windCondition = "Moderate",
+            airTempF = 62.0,
+            waterClarity = "Stained"
+        ))
+
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-12-1",
+            species = "Striped Bass",
+            length = "26", weight = "8.5",
+            waterTemp = "58", depth = "5",
+            lengthInches = 26.0, weightLbs = 8.5,
+            waterTempF = 58.0, depthFeet = 5.0,
+            tripId = tripId12, bait = "live shad",
+            notes = SAMPLE_MARKER,
+            latitude = 36.521, longitude = -78.301,
+            timestamp = start12 + 1800000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-12-2",
+            species = "Largemouth Bass",
+            length = "17", weight = "2.8",
+            waterTemp = "60", depth = "2",
+            lengthInches = 17.0, weightLbs = 2.8,
+            waterTempF = 60.0, depthFeet = 2.0,
+            tripId = tripId12, bait = "crankbait",
+            notes = SAMPLE_MARKER,
+            latitude = 36.522, longitude = -78.302,
+            timestamp = start12 + 7200000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}catch-12-3",
+            species = "Bluegill",
+            length = "8", weight = "0.5",
+            waterTemp = "62", depth = "2",
+            lengthInches = 8.0, weightLbs = 0.5,
+            waterTempF = 62.0, depthFeet = 2.0,
+            tripId = tripId12, bait = "worm",
+            notes = SAMPLE_MARKER,
+            latitude = 36.523, longitude = -78.303,
+            timestamp = start12 + 10800000
+        ))
+        catchLogDao.insertCatch(CatchLog(
+            localUuid = "${UUID_PREFIX}nocatch-12-1",
+            logType = "NO_CATCH", species = "No Catch",
+            length = "", weight = "",
+            waterTemp = "62", depth = "10",
+            waterTempF = 62.0, depthFeet = 10.0,
+            tripId = tripId12, bait = "live shad",
+            notes = "Slow bite afternoon. $SAMPLE_MARKER",
+            latitude = 36.524, longitude = -78.304,
+            timestamp = start12 + 12600000
+        ))
+
         return "Sample data added"
     }
 

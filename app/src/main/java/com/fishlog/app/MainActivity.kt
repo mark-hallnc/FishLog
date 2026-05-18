@@ -118,6 +118,7 @@ fun MainScreen(
     var currentScreen by remember { mutableStateOf("Home") }
     var previousScreen by remember { mutableStateOf("Home") }
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
+    var focusedLogOnMap by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -140,6 +141,7 @@ fun MainScreen(
                 },
                 onMapClick = { 
                     previousScreen = "Home"
+                    focusedLogOnMap = null
                     currentScreen = "Map" 
                 },
                 onInsightsClick = { currentScreen = "Insights" },
@@ -237,12 +239,18 @@ fun MainScreen(
                     onDelete = {
                         viewModel.deleteCatch(catch, photoStorageHelper)
                         currentScreen = previousScreen
+                    },
+                    onViewOnMap = { log ->
+                        selectedCatch = log
+                        focusedLogOnMap = log
+                        previousScreen = "Detail"
+                        currentScreen = "Map"
                     }
                 )
             } ?: run { currentScreen = previousScreen }
             "Map" -> MapScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = "Home" },
+                onBack = { currentScreen = previousScreen },
                 onLogClick = { catch ->
                     selectedCatch = catch
                     previousScreen = "Map"
@@ -251,7 +259,8 @@ fun MainScreen(
                 onTripClick = { trip ->
                     selectedTrip = trip
                     currentScreen = "TripDetail"
-                }
+                },
+                focusLog = focusedLogOnMap
             )
             "Insights" -> InsightsScreen(
                 viewModel = viewModel,

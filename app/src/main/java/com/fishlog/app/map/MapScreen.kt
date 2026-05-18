@@ -40,7 +40,8 @@ fun MapScreen(
     viewModel: FishLogViewModel,
     onBack: () -> Unit,
     onLogClick: (CatchLog) -> Unit,
-    onTripClick: (FishingTrip) -> Unit
+    onTripClick: (FishingTrip) -> Unit,
+    focusLog: CatchLog? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -56,7 +57,7 @@ fun MapScreen(
     var logTypeFilter by remember { mutableStateOf(LogTypeFilter.ALL) }
     var showFilters by remember { mutableStateOf(false) }
     
-    var selectedLogForOverlay by remember { mutableStateOf<CatchLog?>(null) }
+    var selectedLogForOverlay by remember { mutableStateOf<CatchLog?>(focusLog) }
 
     val speciesList = remember(catches) {
         listOf("All Species") + catches.filter { it.logType == "CATCH" }.map { it.species }.distinct().sorted()
@@ -185,7 +186,13 @@ fun MapScreen(
 
     LaunchedEffect(Unit) {
         if (!initialCenterApplied) {
-            centerOnUser()
+            if (focusLog != null && focusLog.latitude != null && focusLog.longitude != null) {
+                mapView.controller.setCenter(GeoPoint(focusLog.latitude, focusLog.longitude))
+                mapView.controller.setZoom(15.0)
+                initialCenterApplied = true
+            } else {
+                centerOnUser()
+            }
         }
     }
 

@@ -49,8 +49,8 @@ fun TripSummaryScreen(
     }
 
     val topBait = remember(tripLogs) {
-        tripLogs.map { it.bait }
-            .filter { it.isNotBlank() }
+        tripLogs.filter { it.logType == "CATCH" && it.bait.isNotBlank() }
+            .map { it.bait }
             .groupBy { it }
             .maxByOrNull { it.value.size }?.key
     }
