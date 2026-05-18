@@ -1,9 +1,11 @@
 package com.fishlog.app.ui
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishSpecies
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,7 +50,8 @@ fun SpeciesPicker(
                 .fillMaxWidth()
                 .menuAnchor(),
             isError = isError,
-            singleLine = true
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
         )
 
         if (expanded && filteredSuggestions.isNotEmpty()) {

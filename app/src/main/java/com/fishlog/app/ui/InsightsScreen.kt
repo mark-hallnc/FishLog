@@ -233,13 +233,17 @@ fun TopBaitsSection(logs: List<CatchLog>) {
 
 @Composable
 fun MonthlyActivitySection(logs: List<CatchLog>) {
-    val monthFormat = SimpleDateFormat("MMMM", Locale.getDefault())
+    val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
     val monthlyData = logs
         .filter { it.logType == "CATCH" }
         .groupBy { 
             val cal = Calendar.getInstance()
             cal.timeInMillis = it.timestamp
             cal.set(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
             cal.timeInMillis
         }
         .mapValues { it.value.size }

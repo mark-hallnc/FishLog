@@ -454,17 +454,9 @@ fun HomeScreen(
             }
             item {
                 HomeCard(
-                    title = "Export",
-                    subtitle = "CSV data",
-                    icon = Icons.Default.FileDownload,
-                    onClick = onExportClick
-                )
-            }
-            item {
-                HomeCard(
-                    title = "Backup",
-                    subtitle = "Cloud/Local",
-                    icon = Icons.Default.CloudQueue,
+                    title = "Data & Backup",
+                    subtitle = "Import, export, backup",
+                    icon = Icons.Default.Storage,
                     onClick = onBackupClick
                 )
             }
