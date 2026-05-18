@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -45,6 +46,7 @@ import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.PhotoStorageHelper
+import com.fishlog.app.data.AppPreferences
 
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -73,15 +75,44 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             )
-            FishLogTheme {
-                MainScreen(viewModel)
+
+            val appPreferences = remember { AppPreferences(applicationContext) }
+            var appearanceMode by remember { mutableStateOf(appPreferences.getAppearanceMode()) }
+            var unitSystem by remember { mutableStateOf(appPreferences.getUnitSystem()) }
+
+            val darkTheme = when (appearanceMode) {
+                AppPreferences.MODE_LIGHT -> false
+                AppPreferences.MODE_DARK -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            FishLogTheme(darkTheme = darkTheme) {
+                MainScreen(
+                    viewModel = viewModel,
+                    appearanceMode = appearanceMode,
+                    unitSystem = unitSystem,
+                    onAppearanceModeChange = { mode ->
+                        appearanceMode = mode
+                        appPreferences.setAppearanceMode(mode)
+                    },
+                    onUnitSystemChange = { system ->
+                        unitSystem = system
+                        appPreferences.setUnitSystem(system)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun MainScreen(viewModel: FishLogViewModel) {
+fun MainScreen(
+    viewModel: FishLogViewModel,
+    appearanceMode: String,
+    unitSystem: String,
+    onAppearanceModeChange: (String) -> Unit,
+    onUnitSystemChange: (String) -> Unit
+) {
     val context = LocalContext.current
     val photoStorageHelper = remember { PhotoStorageHelper(context) }
     var currentScreen by remember { mutableStateOf("Home") }
@@ -136,6 +167,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 TripDetailScreen(
                     trip = trip,
                     viewModel = viewModel,
+                    unitSystem = unitSystem,
                     onBack = { currentScreen = "Home" },
                     onLogClick = { catch ->
                         selectedCatch = catch
@@ -175,11 +207,13 @@ fun MainScreen(viewModel: FishLogViewModel) {
             } ?: run { currentScreen = "Home" }
             "Form" -> CatchFormScreen(
                 viewModel = viewModel,
+                unitSystem = unitSystem,
                 onBack = { currentScreen = if (selectedCatch != null) "Detail" else "Home" },
                 editingCatch = selectedCatch
             )
             "NoCatchForm" -> NoCatchFormScreen(
                 viewModel = viewModel,
+                unitSystem = unitSystem,
                 onBack = { currentScreen = if (selectedCatch != null) "Detail" else "Home" },
                 editingLog = selectedCatch
             )
@@ -195,6 +229,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
             "Detail" -> selectedCatch?.let { catch ->
                 CatchDetailScreen(
                     catch = catch,
+                    unitSystem = unitSystem,
                     onBack = { currentScreen = previousScreen },
                     onEdit = { 
                         currentScreen = if (catch.logType == "NO_CATCH") "NoCatchForm" else "Form"
@@ -216,6 +251,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
             )
             "Insights" -> InsightsScreen(
                 viewModel = viewModel,
+                unitSystem = unitSystem,
                 onBack = { currentScreen = "Home" }
             )
             "Backup" -> BackupScreen(
@@ -241,12 +277,17 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 TripSummaryScreen(
                     trip = trip,
                     viewModel = viewModel,
+                    unitSystem = unitSystem,
                     onDone = { currentScreen = "Home" },
                     onViewDetails = { currentScreen = "TripDetail" }
                 )
             } ?: run { currentScreen = "Home" }
             "Settings" -> SettingsScreen(
                 viewModel = viewModel,
+                appearanceMode = appearanceMode,
+                unitSystem = unitSystem,
+                onAppearanceModeChange = onAppearanceModeChange,
+                onUnitSystemChange = onUnitSystemChange,
                 onBack = { currentScreen = "Home" },
                 onBackupClick = { currentScreen = "Backup" },
                 onExportClick = { currentScreen = "Export" }

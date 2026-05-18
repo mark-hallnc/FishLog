@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.ui.RecentValueChips
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
@@ -29,9 +30,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun NoCatchFormScreen(
     viewModel: FishLogViewModel,
+    unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit,
     editingLog: CatchLog? = null
 ) {
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val tempLabel = if (isMetric) "Water Temp (°C)" else "Water Temp (°F)"
+    val depthLabel = if (isMetric) "Depth (m)" else "Depth (ft)"
+    val tempSuffix = if (isMetric) "°C" else "°F"
+    val depthSuffix = if (isMetric) " m" else " ft"
+
     val activeTrip by viewModel.activeTrip.collectAsState()
     val catches by viewModel.allCatches.collectAsState()
 
@@ -207,14 +215,14 @@ fun NoCatchFormScreen(
                                 OutlinedTextField(
                                     value = waterTemp,
                                     onValueChange = { waterTemp = it },
-                                    label = { Text("Water Temp (°F)") },
+                                    label = { Text(tempLabel) },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 RecentValueChips(
-                                    values = recentTemps.map { "$it°F" },
-                                    onValueSelected = { waterTemp = it.removeSuffix("°F") },
+                                    values = recentTemps.map { "$it$tempSuffix" },
+                                    onValueSelected = { waterTemp = it.removeSuffix(tempSuffix) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -222,14 +230,14 @@ fun NoCatchFormScreen(
                                 OutlinedTextField(
                                     value = depth,
                                     onValueChange = { depth = it },
-                                    label = { Text("Depth (ft)") },
+                                    label = { Text(depthLabel) },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 RecentValueChips(
-                                    values = recentDepths.map { "$it ft" },
-                                    onValueSelected = { depth = it.removeSuffix(" ft") },
+                                    values = recentDepths.map { "$it$depthSuffix" },
+                                    onValueSelected = { depth = it.removeSuffix(depthSuffix) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.data.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,6 +29,7 @@ import java.util.*
 fun TripDetailScreen(
     trip: FishingTrip,
     viewModel: FishLogViewModel,
+    unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit,
     onLogClick: (CatchLog) -> Unit,
     onLogCatch: () -> Unit = {},
@@ -40,6 +42,9 @@ fun TripDetailScreen(
     val tripLogs = remember(catches, trip.id) {
         catches.filter { it.tripId == trip.id }
     }
+
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val tempSuffix = if (isMetric) "°C" else "°F"
 
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -259,7 +264,7 @@ fun TripDetailScreen(
                         }
                         if (trip.airTempF != null || trip.waterClarity.isNotBlank()) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                if (trip.airTempF != null) StatItem("Air Temp", "${trip.airTempF}°F", Modifier.weight(1f))
+                                if (trip.airTempF != null) StatItem("Air Temp", "${trip.airTempF}$tempSuffix", Modifier.weight(1f))
                                 if (trip.waterClarity.isNotBlank()) StatItem("Clarity", trip.waterClarity, Modifier.weight(1f))
                             }
                         }

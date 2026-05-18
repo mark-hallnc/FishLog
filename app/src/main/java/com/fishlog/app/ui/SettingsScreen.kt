@@ -18,18 +18,98 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fishlog.app.data.AppPreferences
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: FishLogViewModel,
+    appearanceMode: String,
+    unitSystem: String,
+    onAppearanceModeChange: (String) -> Unit,
+    onUnitSystemChange: (String) -> Unit,
     onBack: () -> Unit,
     onBackupClick: () -> Unit,
     onExportClick: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    var showAppearanceDialog by remember { mutableStateOf(false) }
+    var showUnitDialog by remember { mutableStateOf(false) }
+
+    if (showAppearanceDialog) {
+        AlertDialog(
+            onDismissRequest = { showAppearanceDialog = false },
+            title = { Text("Select Appearance") },
+            text = {
+                Column {
+                    AppearanceOption(
+                        label = "Follow system",
+                        selected = appearanceMode == AppPreferences.MODE_FOLLOW_SYSTEM,
+                        onClick = {
+                            onAppearanceModeChange(AppPreferences.MODE_FOLLOW_SYSTEM)
+                            showAppearanceDialog = false
+                        }
+                    )
+                    AppearanceOption(
+                        label = "Light",
+                        selected = appearanceMode == AppPreferences.MODE_LIGHT,
+                        onClick = {
+                            onAppearanceModeChange(AppPreferences.MODE_LIGHT)
+                            showAppearanceDialog = false
+                        }
+                    )
+                    AppearanceOption(
+                        label = "Dark",
+                        selected = appearanceMode == AppPreferences.MODE_DARK,
+                        onClick = {
+                            onAppearanceModeChange(AppPreferences.MODE_DARK)
+                            showAppearanceDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAppearanceDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showUnitDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnitDialog = false },
+            title = { Text("Select Units") },
+            text = {
+                Column {
+                    AppearanceOption(
+                        label = "US units",
+                        selected = unitSystem == AppPreferences.UNITS_US,
+                        onClick = {
+                            onUnitSystemChange(AppPreferences.UNITS_US)
+                            showUnitDialog = false
+                        }
+                    )
+                    AppearanceOption(
+                        label = "Metric",
+                        selected = unitSystem == AppPreferences.UNITS_METRIC,
+                        onClick = {
+                            onUnitSystemChange(AppPreferences.UNITS_METRIC)
+                            showUnitDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showUnitDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -61,18 +141,36 @@ fun SettingsScreen(
         ) {
             // App Preferences
             SettingsSection(title = "App Preferences") {
+                val appearanceLabel = when (appearanceMode) {
+                    AppPreferences.MODE_LIGHT -> "Light"
+                    AppPreferences.MODE_DARK -> "Dark"
+                    else -> "Follow system"
+                }
+                val appearanceHelper = when (appearanceMode) {
+                    AppPreferences.MODE_LIGHT -> "FishLog always uses light mode."
+                    AppPreferences.MODE_DARK -> "FishLog always uses dark mode."
+                    else -> "Light/dark mode follows your Android setting."
+                }
                 SettingRow(
                     icon = Icons.Default.BrightnessMedium,
                     title = "Appearance",
-                    subtitle = "Follow system",
-                    helperText = "Light/dark mode follows your Android setting."
+                    subtitle = appearanceLabel,
+                    helperText = appearanceHelper,
+                    onClick = { showAppearanceDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                
+                val unitLabel = if (unitSystem == AppPreferences.UNITS_METRIC) "Metric" else "US units"
+                val unitHelper = if (unitSystem == AppPreferences.UNITS_METRIC) 
+                    "°C, meters, centimeters, kilograms" 
+                    else "°F, feet, inches, pounds"
+                
                 SettingRow(
                     icon = Icons.Default.Straighten,
                     title = "Units",
-                    subtitle = "US units",
-                    helperText = "°F, feet, inches, pounds"
+                    subtitle = unitLabel,
+                    helperText = unitHelper,
+                    onClick = { showUnitDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 SettingRow(
@@ -250,5 +348,24 @@ fun SettingRow(
                 tint = MaterialTheme.colorScheme.outlineVariant
             )
         }
+    }
+}
+
+@Composable
+fun AppearanceOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
+import com.fishlog.app.data.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,10 +25,15 @@ import java.util.*
 @Composable
 fun InsightsScreen(
     viewModel: FishLogViewModel,
+    unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit
 ) {
     val logs by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
+
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val tempSuffix = if (isMetric) "°C" else "°F"
+    val depthSuffix = if (isMetric) "m" else "ft"
 
     Scaffold(
         topBar = {
@@ -88,7 +94,7 @@ fun InsightsScreen(
                 TopSpeciesSection(logs)
                 TopBaitsSection(logs)
                 MonthlyActivitySection(logs)
-                EnvironmentalSection(logs)
+                EnvironmentalSection(logs, tempSuffix, depthSuffix)
                 LocationCoverageSection(logs)
                 TopWaterBodiesSection(trips)
                 TripInsightsSection(logs, trips)
@@ -270,7 +276,7 @@ fun MonthlyActivitySection(logs: List<CatchLog>) {
 }
 
 @Composable
-fun EnvironmentalSection(logs: List<CatchLog>) {
+fun EnvironmentalSection(logs: List<CatchLog>, tempSuffix: String, depthSuffix: String) {
     val catches = logs.filter { it.logType == "CATCH" }
     
     val temps = catches.mapNotNull { it.waterTempF }
@@ -283,9 +289,9 @@ fun EnvironmentalSection(logs: List<CatchLog>) {
             if (temps.isNotEmpty()) {
                 Text("Water Temp Range", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    StatItem("Lowest", "${temps.minOrNull()}°F", Modifier.weight(1f))
-                    StatItem("Highest", "${temps.maxOrNull()}°F", Modifier.weight(1f))
-                    StatItem("Average", "${String.format("%.1f", temps.average())}°F", Modifier.weight(1f))
+                    StatItem("Lowest", "${temps.minOrNull()}$tempSuffix", Modifier.weight(1f))
+                    StatItem("Highest", "${temps.maxOrNull()}$tempSuffix", Modifier.weight(1f))
+                    StatItem("Average", "${String.format("%.1f", temps.average())}$tempSuffix", Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -293,9 +299,9 @@ fun EnvironmentalSection(logs: List<CatchLog>) {
             if (depths.isNotEmpty()) {
                 Text("Depth Range", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    StatItem("Shallowest", "${depths.minOrNull()}ft", Modifier.weight(1f))
-                    StatItem("Deepest", "${depths.maxOrNull()}ft", Modifier.weight(1f))
-                    StatItem("Average", "${String.format("%.1f", depths.average())}ft", Modifier.weight(1f))
+                    StatItem("Shallowest", "${depths.minOrNull()}$depthSuffix", Modifier.weight(1f))
+                    StatItem("Deepest", "${depths.maxOrNull()}$depthSuffix", Modifier.weight(1f))
+                    StatItem("Average", "${String.format("%.1f", depths.average())}$depthSuffix", Modifier.weight(1f))
                 }
             }
         }

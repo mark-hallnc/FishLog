@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
+import com.fishlog.app.data.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -30,11 +31,18 @@ import java.util.Locale
 @Composable
 fun CatchDetailScreen(
     catch: CatchLog,
+    unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val lengthSuffix = if (isMetric) "cm" else "in"
+    val weightSuffix = if (isMetric) "kg" else "lbs"
+    val tempSuffix = if (isMetric) "°C" else "°F"
+    val depthSuffix = if (isMetric) "m" else "ft"
+
     val photoStorageHelper = remember { PhotoStorageHelper(context) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val isNoCatch = catch.logType == "NO_CATCH"
@@ -141,8 +149,8 @@ fun CatchDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Measurements", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 12.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            val lengthText = catch.lengthInches?.let { "$it in" } ?: "${catch.length} in"
-                            val weightText = catch.weightLbs?.let { "$it lbs" } ?: "${catch.weight} lbs"
+                            val lengthText = catch.lengthInches?.let { "$it $lengthSuffix" } ?: "${catch.length} $lengthSuffix"
+                            val weightText = catch.weightLbs?.let { "$it $weightSuffix" } ?: "${catch.weight} $weightSuffix"
                             DetailItem("Length", lengthText, Modifier.weight(1f))
                             DetailItem("Weight", weightText, Modifier.weight(1f))
                         }
@@ -159,8 +167,8 @@ fun CatchDetailScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Conditions & Bait", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 12.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        val tempText = catch.waterTempF?.let { "$it °F" } ?: "${catch.waterTemp} °F"
-                        val depthText = catch.depthFeet?.let { "$it ft" } ?: "${catch.depth} ft"
+                        val tempText = catch.waterTempF?.let { "$it $tempSuffix" } ?: "${catch.waterTemp} $tempSuffix"
+                        val depthText = catch.depthFeet?.let { "$it $depthSuffix" } ?: "${catch.depth} $depthSuffix"
                         DetailItem("Water Temp", tempText, Modifier.weight(1f))
                         DetailItem("Depth", depthText, Modifier.weight(1f))
                     }

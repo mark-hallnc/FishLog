@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
+import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.ui.RecentValueChips
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
@@ -41,9 +42,18 @@ import kotlinx.coroutines.launch
 @Composable
 fun CatchFormScreen(
     viewModel: FishLogViewModel,
+    unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit,
     editingCatch: CatchLog? = null
 ) {
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val lengthLabel = if (isMetric) "Length (cm)" else "Length (in)"
+    val weightLabel = if (isMetric) "Weight (kg)" else "Weight (lbs)"
+    val tempLabel = if (isMetric) "Water Temp (°C)" else "Water Temp (°F)"
+    val depthLabel = if (isMetric) "Depth (m)" else "Depth (ft)"
+    val tempSuffix = if (isMetric) "°C" else "°F"
+    val depthSuffix = if (isMetric) " m" else " ft"
+
     var species by remember { mutableStateOf(editingCatch?.species ?: "") }
     
     val catches by viewModel.allCatches.collectAsState()
@@ -273,7 +283,7 @@ fun CatchFormScreen(
                             OutlinedTextField(
                                 value = length,
                                 onValueChange = { length = it },
-                                label = { Text("Length (in)") },
+                                label = { Text(lengthLabel) },
                                 modifier = Modifier.weight(1f),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 shape = RoundedCornerShape(12.dp)
@@ -281,7 +291,7 @@ fun CatchFormScreen(
                             OutlinedTextField(
                                 value = weight,
                                 onValueChange = { weight = it },
-                                label = { Text("Weight (lbs)") },
+                                label = { Text(weightLabel) },
                                 modifier = Modifier.weight(1f),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 shape = RoundedCornerShape(12.dp)
@@ -370,14 +380,14 @@ fun CatchFormScreen(
                                 OutlinedTextField(
                                     value = waterTemp,
                                     onValueChange = { waterTemp = it },
-                                    label = { Text("Water Temp (°F)") },
+                                    label = { Text(tempLabel) },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 RecentValueChips(
-                                    values = recentTemps.map { "$it°F" },
-                                    onValueSelected = { waterTemp = it.removeSuffix("°F") },
+                                    values = recentTemps.map { "$it$tempSuffix" },
+                                    onValueSelected = { waterTemp = it.removeSuffix(tempSuffix) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -385,14 +395,14 @@ fun CatchFormScreen(
                                 OutlinedTextField(
                                     value = depth,
                                     onValueChange = { depth = it },
-                                    label = { Text("Depth (ft)") },
+                                    label = { Text(depthLabel) },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 RecentValueChips(
-                                    values = recentDepths.map { "$it ft" },
-                                    onValueSelected = { depth = it.removeSuffix(" ft") },
+                                    values = recentDepths.map { "$it$depthSuffix" },
+                                    onValueSelected = { depth = it.removeSuffix(depthSuffix) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }

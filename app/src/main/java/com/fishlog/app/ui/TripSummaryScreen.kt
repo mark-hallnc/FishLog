@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.data.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -25,6 +26,7 @@ import java.util.*
 fun TripSummaryScreen(
     trip: FishingTrip,
     viewModel: FishLogViewModel,
+    unitSystem: String = AppPreferences.UNITS_US,
     onDone: () -> Unit,
     onViewDetails: () -> Unit
 ) {
@@ -32,6 +34,9 @@ fun TripSummaryScreen(
     val tripLogs = remember(catches, trip.id) {
         catches.filter { it.tripId == trip.id }
     }
+
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val tempSuffix = if (isMetric) "°C" else "°F"
 
     val catchCount = tripLogs.count { it.logType == "CATCH" }
     val noCatchCount = tripLogs.count { it.logType == "NO_CATCH" }
@@ -155,7 +160,7 @@ fun TripSummaryScreen(
                         }
                         
                         val row2 = listOfNotNull(
-                            trip.airTempF?.let { "Temp: ${it.toInt()}°F" },
+                            trip.airTempF?.let { "Temp: ${it.toInt()}$tempSuffix" },
                             if (trip.waterClarity.isNotBlank()) "Clarity: ${trip.waterClarity}" else null
                         )
                         if (row2.isNotEmpty()) {
