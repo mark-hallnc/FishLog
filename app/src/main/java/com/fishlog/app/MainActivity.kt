@@ -4,15 +4,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -238,69 +245,158 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val activeTrip by viewModel.activeTrip.collectAsState()
+    val catches by viewModel.allCatches.collectAsState()
+    val trips by viewModel.allTrips.collectAsState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Text(
-            text = "FishLog",
-            style = MaterialTheme.typography.displayMedium.copy(
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+        // Hero Area
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ),
+                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                )
+                .padding(24.dp)
+        ) {
+            // Decorative background element (subtle wave-like circle)
+            Box(
+                modifier = Modifier
+                    .size(150.dp)
+                    .offset(x = 100.dp, y = (-50).dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.05f))
             )
-        )
-        Text(
-            text = "Offline fishing log and map",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                color = MaterialTheme.colorScheme.secondary,
-                letterSpacing = 1.2.sp
-            )
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
 
-        TripStatusCard(
-            activeTrip = activeTrip,
-            onStartTrip = onStartTripClick,
-            onEndTrip = {
-                // TripStatusCard expect a suspend lambda.
-                // onEndTripClick is not suspend, but we don't need it to be if it handles its own scope or if we just want it to return immediately.
-                // However, TripStatusCard waits for onEndTrip() to complete before resetting isEndingTrip.
-                // So let's make onEndTripClick suspend or just call viewModel here.
-                activeTrip?.let { trip ->
-                    viewModel.endTrip(trip)
-                    onEndTripClick(trip)
+            Column(
+                modifier = Modifier.align(Alignment.BottomStart)
+            ) {
+                Text(
+                    text = "FishLog",
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-1).sp
+                    )
+                )
+                Text(
+                    text = "Track catches. Spot patterns.",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Quick stats row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    QuickStat(
+                        label = "Trips",
+                        value = trips.size.toString(),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    QuickStat(
+                        label = "Catches",
+                        value = catches.count { it.logType == "CATCH" }.toString(),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    if (trips.isNotEmpty()) {
+                        val lastTripDate = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(trips.maxOf { it.startTime }))
+                        QuickStat(
+                            label = "Last Outing",
+                            value = lastTripDate,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
-            },
-            onViewTrip = { activeTrip?.let { onViewTripClick(it) } },
-            onLogCatch = onLogCatchClick,
-            onLogNoCatch = onLogNoCatchClick
-        )
-
+            }
+            
+            Icon(
+                imageVector = Icons.Default.Water,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(80.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 10.dp, y = (-10).dp),
+                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f)
+            )
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Active Trip section
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            TripStatusCard(
+                activeTrip = activeTrip,
+                onStartTrip = onStartTripClick,
+                onEndTrip = {
+                    activeTrip?.let { trip ->
+                        viewModel.endTrip(trip)
+                        onEndTripClick(trip)
+                    }
+                },
+                onViewTrip = { activeTrip?.let { onViewTripClick(it) } },
+                onLogCatch = onLogCatchClick,
+                onLogNoCatch = onLogNoCatchClick
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Dashboard",
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary,
+                letterSpacing = 1.sp
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            textAlign = TextAlign.Start
+        )
         
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
             item {
                 HomeCard(
                     title = "Log Catch",
+                    subtitle = "Got one!",
                     icon = Icons.Default.AddCircle,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     onClick = onLogCatchClick
                 )
             }
             item {
                 HomeCard(
                     title = "No Catch",
+                    subtitle = "Still fishing",
                     icon = Icons.Default.Block,
                     onClick = onLogNoCatchClick
                 )
@@ -308,6 +404,7 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "History",
+                    subtitle = "Past logs",
                     icon = Icons.Default.History,
                     onClick = onHistoryClick
                 )
@@ -315,39 +412,63 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "Map",
+                    subtitle = "Hotspots",
                     icon = Icons.Default.Map,
                     onClick = onMapClick
                 )
             }
             item {
                 HomeCard(
-                    title = "Insights",
-                    icon = Icons.Default.Analytics,
-                    onClick = onInsightsClick
-                )
-            }
-            item {
-                HomeCard(
-                    title = "Backup",
-                    icon = Icons.Default.CloudQueue,
-                    onClick = onBackupClick
-                )
-            }
-            item {
-                HomeCard(
                     title = "Trip History",
+                    subtitle = "Outings",
                     icon = Icons.Default.ListAlt,
                     onClick = onTripHistoryClick
                 )
             }
             item {
                 HomeCard(
+                    title = "Insights",
+                    subtitle = "Analytics",
+                    icon = Icons.Default.Analytics,
+                    onClick = onInsightsClick
+                )
+            }
+            item {
+                HomeCard(
                     title = "Export",
+                    subtitle = "CSV data",
                     icon = Icons.Default.FileDownload,
                     onClick = onExportClick
                 )
             }
+            item {
+                HomeCard(
+                    title = "Backup",
+                    subtitle = "Cloud/Local",
+                    icon = Icons.Default.CloudQueue,
+                    onClick = onBackupClick
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun QuickStat(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.Start) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = color.copy(alpha = 0.7f)
+            )
+        )
     }
 }
 
@@ -363,7 +484,6 @@ fun TripStatusCard(
     var isEndingTrip by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
-    // Reset isEndingTrip when activeTrip changes (e.g. when it becomes null)
     LaunchedEffect(activeTrip == null) {
         if (activeTrip == null) {
             isEndingTrip = false
@@ -372,82 +492,114 @@ fun TripStatusCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (activeTrip != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+            containerColor = if (activeTrip != null) 
+                MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (activeTrip != null) 4.dp else 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = if (activeTrip == null) Alignment.CenterHorizontally else Alignment.Start
         ) {
             if (activeTrip == null) {
-                Text("No active fishing trip", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = onStartTrip, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Anchor,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "No active fishing trip",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Start a trip to track catches and conditions.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onStartTrip,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Start Trip")
+                    Text("Start New Trip")
                 }
             } else {
-                Text("Active Trip: ${activeTrip.name}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                if (activeTrip.waterBody.isNotBlank()) {
-                    Text(activeTrip.waterBody, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Green, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "ACTIVE TRIP",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                        Text(
+                            text = activeTrip.name,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (activeTrip.waterBody.isNotBlank()) {
+                            Text(
+                                text = activeTrip.waterBody,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                        Text(
+                            text = "Started at ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(activeTrip.startTime))}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    IconButton(
+                        onClick = onViewTrip,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                            .size(40.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = "View Details",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
-                Text("Started at ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(activeTrip.startTime))}", style = MaterialTheme.typography.bodySmall)
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = onViewTrip,
-                        modifier = Modifier.weight(1f),
-                        enabled = !isEndingTrip,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-                    ) {
-                        Text("View Details")
-                    }
-                    Button(
-                        onClick = {
-                            if (isEndingTrip) return@Button
-                            scope.launch {
-                                isEndingTrip = true
-                                try {
-                                    onEndTrip()
-                                } catch (e: Exception) {
-                                    isEndingTrip = false
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isEndingTrip,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        if (isEndingTrip) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onError,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Stop, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("End Trip")
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Button(
                         onClick = onLogCatch,
                         modifier = Modifier.weight(1f),
                         enabled = !isEndingTrip,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -457,12 +609,43 @@ fun TripStatusCard(
                         onClick = onLogNoCatch,
                         modifier = Modifier.weight(1f),
                         enabled = !isEndingTrip,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Block, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("No-Catch")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        if (isEndingTrip) return@OutlinedButton
+                        scope.launch {
+                            isEndingTrip = true
+                            try {
+                                onEndTrip()
+                            } catch (e: Exception) {
+                                isEndingTrip = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isEndingTrip,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    if (isEndingTrip) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.error,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Default.Stop, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("End Fishing Trip")
                     }
                 }
             }
@@ -470,42 +653,55 @@ fun TripStatusCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeCard(
     title: String,
+    subtitle: String,
     icon: ImageVector,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            .height(110.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+            containerColor = containerColor,
+            contentColor = contentColor
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.secondary
+                modifier = Modifier.size(28.dp),
+                tint = if (containerColor == MaterialTheme.colorScheme.primaryContainer) 
+                    contentColor else MaterialTheme.colorScheme.secondary
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                textAlign = TextAlign.Center
-            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    lineHeight = 20.sp
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = if (containerColor == MaterialTheme.colorScheme.primaryContainer) 
+                            contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
         }
     }
 }
