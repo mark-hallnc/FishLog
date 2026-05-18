@@ -39,6 +39,7 @@ import com.fishlog.app.ui.TripDetailScreen
 import com.fishlog.app.ui.TripHistoryScreen
 import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.EditTripScreen
+import com.fishlog.app.ui.SettingsScreen
 import com.fishlog.app.ui.BackupScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
@@ -114,6 +115,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 onBackupClick = { currentScreen = "Backup" },
                 onExportClick = { currentScreen = "Export" },
                 onTripHistoryClick = { currentScreen = "TripHistory" },
+                onSettingsClick = { currentScreen = "Settings" },
                 onStartTripClick = { currentScreen = "StartTrip" },
                 onViewTripClick = { trip ->
                     selectedTrip = trip
@@ -243,6 +245,12 @@ fun MainScreen(viewModel: FishLogViewModel) {
                     onViewDetails = { currentScreen = "TripDetail" }
                 )
             } ?: run { currentScreen = "Home" }
+            "Settings" -> SettingsScreen(
+                viewModel = viewModel,
+                onBack = { currentScreen = "Home" },
+                onBackupClick = { currentScreen = "Backup" },
+                onExportClick = { currentScreen = "Export" }
+            )
         }
     }
 }
@@ -258,6 +266,7 @@ fun HomeScreen(
     onBackupClick: () -> Unit,
     onExportClick: () -> Unit,
     onTripHistoryClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onStartTripClick: () -> Unit,
     onViewTripClick: (FishingTrip) -> Unit,
     onEndTripClick: (FishingTrip) -> Unit,
@@ -458,6 +467,14 @@ fun HomeScreen(
                     subtitle = "Import, export, backup",
                     icon = Icons.Default.Storage,
                     onClick = onBackupClick
+                )
+            }
+            item {
+                HomeCard(
+                    title = "Settings",
+                    subtitle = "Preferences",
+                    icon = Icons.Default.Settings,
+                    onClick = onSettingsClick
                 )
             }
         }
