@@ -216,5 +216,19 @@ class FishLogViewModel(
             }
         }
     }
+
+    fun seedSampleData(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = com.fishlog.app.data.SampleDataSeeder.seed(catchLogDao, fishingTripDao)
+            onResult(result)
+        }
+    }
+
+    fun removeSampleData(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = com.fishlog.app.data.SampleDataSeeder.clear(catchLogDao, fishingTripDao)
+            onResult(result)
+        }
+    }
 }
 
