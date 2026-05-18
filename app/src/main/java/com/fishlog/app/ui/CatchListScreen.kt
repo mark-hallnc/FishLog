@@ -32,7 +32,8 @@ enum class LogTypeFilter { ALL, CATCHES_ONLY, NO_CATCH_ONLY }
 fun CatchListScreen(
     viewModel: FishLogViewModel,
     onBack: () -> Unit,
-    onCatchClick: (CatchLog) -> Unit
+    onCatchClick: (CatchLog) -> Unit,
+    onPhotoClick: (String) -> Unit = {}
 ) {
     val catches by viewModel.allCatches.collectAsState()
 
@@ -215,6 +216,7 @@ fun CatchListScreen(
                         CatchItem(
                             catch = catch,
                             onClick = { onCatchClick(catch) },
+                            onPhotoClick = onPhotoClick,
                             viewModel = viewModel
                         )
                     }
@@ -406,6 +408,7 @@ fun DropdownFilter(
 fun CatchItem(
     catch: CatchLog,
     onClick: () -> Unit,
+    onPhotoClick: (String) -> Unit = {},
     viewModel: FishLogViewModel? = null
 ) {
     val isNoCatch = catch.logType == "NO_CATCH"
@@ -434,7 +437,8 @@ fun CatchItem(
                     contentDescription = null,
                     modifier = Modifier
                         .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onPhotoClick(catch.photoUri) },
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(16.dp))

@@ -37,7 +37,8 @@ fun CatchDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onViewOnMap: (CatchLog) -> Unit = {}
+    onViewOnMap: (CatchLog) -> Unit = {},
+    onPhotoClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val isMetric = unitSystem == AppPreferences.UNITS_METRIC
@@ -105,7 +106,8 @@ fun CatchDetailScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp),
+                        .height(300.dp)
+                        .clickable { onPhotoClick(catch.photoUri) },
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {

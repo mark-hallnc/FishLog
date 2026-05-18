@@ -42,6 +42,7 @@ import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.SettingsScreen
 import com.fishlog.app.ui.BackupScreen
+import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
@@ -120,6 +121,7 @@ fun MainScreen(
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
     var focusedLogOnMap by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
+    var selectedPhotoUri by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -226,6 +228,11 @@ fun MainScreen(
                     selectedCatch = catch
                     previousScreen = "History"
                     currentScreen = "Detail"
+                },
+                onPhotoClick = { uri ->
+                    selectedPhotoUri = uri
+                    previousScreen = "History"
+                    currentScreen = "PhotoViewer"
                 }
             )
             "Detail" -> selectedCatch?.let { catch ->
@@ -245,7 +252,18 @@ fun MainScreen(
                         focusedLogOnMap = log
                         previousScreen = "Detail"
                         currentScreen = "Map"
+                    },
+                    onPhotoClick = { uri ->
+                        selectedPhotoUri = uri
+                        previousScreen = "Detail"
+                        currentScreen = "PhotoViewer"
                     }
+                )
+            } ?: run { currentScreen = previousScreen }
+            "PhotoViewer" -> selectedPhotoUri?.let { uri ->
+                PhotoViewerScreen(
+                    photoUri = uri,
+                    onBack = { currentScreen = previousScreen }
                 )
             } ?: run { currentScreen = previousScreen }
             "Map" -> MapScreen(

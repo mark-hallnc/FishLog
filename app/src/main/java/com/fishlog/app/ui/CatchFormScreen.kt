@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
@@ -323,17 +324,22 @@ fun CatchFormScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
-                                IconButton(
-                                    onClick = { 
-                                        photoStorageHelper.deletePhoto(photoUri)
-                                        photoUri = null 
-                                    },
+                                Row(
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .padding(8.dp)
-                                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                                 ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Remove Photo", tint = Color.White)
+                                    IconButton(
+                                        onClick = { 
+                                            // Optional: If we want to delete immediately, but better on Save or just clear reference
+                                            // photoStorageHelper.deletePhoto(photoUri)
+                                            photoUri = null 
+                                        },
+                                        modifier = Modifier
+                                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Remove Photo", tint = Color.White)
+                                    }
                                 }
                             }
                         }
@@ -361,6 +367,18 @@ fun CatchFormScreen(
                                 Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Gallery")
+                            }
+                        }
+                        
+                        if (photoUri != null) {
+                            TextButton(
+                                onClick = { photoUri = null },
+                                modifier = Modifier.align(Alignment.CenterHorizontally),
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Remove Photo")
                             }
                         }
                     }
@@ -502,6 +520,11 @@ fun CatchFormScreen(
                                     }
 
                                     if (editingCatch != null) {
+                                        // Delete old photo if it was removed or replaced
+                                        if (editingCatch.photoUri != photoUri) {
+                                            photoStorageHelper.deletePhoto(editingCatch.photoUri)
+                                        }
+
                                         val updatedCatch = editingCatch.copy(
                                             species = species,
                                             length = length,
