@@ -23,6 +23,8 @@ import com.fishlog.app.location.LocationService
 import com.fishlog.app.ui.DropdownFilter
 import com.fishlog.app.ui.FishLogViewModel
 import com.fishlog.app.ui.LogTypeFilter
+import com.fishlog.app.ui.DateRangeFilter
+import com.fishlog.app.ui.DateFilterControls
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -50,7 +52,7 @@ fun MapScreen(
     var selectedBait by remember { mutableStateOf("All Baits") }
     var selectedTripId by remember { mutableStateOf<Long?>(null) } // null = All, -1 = Standalone
     var selectedWaterBody by remember { mutableStateOf("All Water Bodies") }
-    var selectedDateRange by remember { mutableStateOf("All Dates") }
+    var dateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
     var logTypeFilter by remember { mutableStateOf(LogTypeFilter.ALL) }
     var showFilters by remember { mutableStateOf(false) }
     
@@ -62,6 +64,22 @@ fun MapScreen(
 
     val baitList = remember(catches) {
         listOf("All Baits") + catches.map { it.bait }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+
+    val availableMonths = remember(catches) {
+        catches.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.timestamp
+            DateRangeFilter.Month(cal.get(Calendar.MONTH), cal.get(Calendar.YEAR))
+        }.distinct().sortedByDescending { it.year * 12 + it.month }
+    }
+
+    val availableYears = remember(catches) {
+        catches.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.timestamp
+            cal.get(Calendar.YEAR)
+        }.distinct().sortedDescending()
     }
 
     val tripOptions = remember(trips) {
@@ -80,15 +98,11 @@ fun MapScreen(
         listOf("All Water Bodies") + trips.map { it.waterBody.trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase() }.sorted()
     }
 
-    val dateRangeOptions = listOf("All Dates", "Today", "Last 7 Days", "Last 30 Days", "This Year")
-
     val logsWithLocation = remember(catches) {
         catches.filter { it.latitude != null && it.longitude != null }
     }
 
-    val filteredLogs = remember(logsWithLocation, selectedSpecies, selectedBait, selectedTripId, selectedWaterBody, selectedDateRange, logTypeFilter, trips) {
-        val now = System.currentTimeMillis()
-        
+    val filteredLogs = remember(logsWithLocation, selectedSpecies, selectedBait, selectedTripId, selectedWaterBody, dateFilter, logTypeFilter, trips) {
         logsWithLocation.filter { log ->
             val matchesSpecies = if (selectedSpecies == "All Species" || log.logType == "NO_CATCH") true else log.species == selectedSpecies
             val matchesBait = if (selectedBait == "All Baits") true else log.bait == selectedBait
@@ -106,13 +120,7 @@ fun MapScreen(
                 trip?.waterBody?.trim()?.equals(selectedWaterBody, ignoreCase = true) == true
             }
             
-            val matchesDate = when (selectedDateRange) {
-                "Today" -> isSameDay(log.timestamp, now)
-                "Last 7 Days" -> log.timestamp >= now - (7L * 24 * 60 * 60 * 1000)
-                "Last 30 Days" -> log.timestamp >= now - (30L * 24 * 60 * 60 * 1000)
-                "This Year" -> isSameYear(log.timestamp, now)
-                else -> true
-            }
+            val matchesDate = dateFilter.matches(log.timestamp)
 
             val matchesLogType = when (logTypeFilter) {
                 LogTypeFilter.ALL -> true
@@ -245,9 +253,10 @@ fun MapScreen(
                     selectedWaterBody = selectedWaterBody,
                     waterBodyList = waterBodyList,
                     onWaterBodySelected = { selectedWaterBody = it },
-                    selectedDateRange = selectedDateRange,
-                    dateRangeOptions = dateRangeOptions,
-                    onDateRangeSelected = { selectedDateRange = it },
+                    dateFilter = dateFilter,
+                    onDateFilterChange = { dateFilter = it },
+                    availableMonths = availableMonths,
+                    availableYears = availableYears,
                     logTypeFilter = logTypeFilter,
                     onLogTypeFilterSelected = { logTypeFilter = it },
                     onClearFilters = {
@@ -255,7 +264,7 @@ fun MapScreen(
                         selectedBait = "All Baits"
                         selectedTripId = null
                         selectedWaterBody = "All Water Bodies"
-                        selectedDateRange = "All Dates"
+                        dateFilter = DateRangeFilter.AllDates
                         logTypeFilter = LogTypeFilter.ALL
                     },
                     modifier = Modifier.zIndex(2f)
@@ -468,9 +477,10 @@ fun MapFilterSection(
     selectedWaterBody: String,
     waterBodyList: List<String>,
     onWaterBodySelected: (String) -> Unit,
-    selectedDateRange: String,
-    dateRangeOptions: List<String>,
-    onDateRangeSelected: (String) -> Unit,
+    dateFilter: DateRangeFilter,
+    onDateFilterChange: (DateRangeFilter) -> Unit,
+    availableMonths: List<DateRangeFilter.Month>,
+    availableYears: List<Int>,
     logTypeFilter: LogTypeFilter,
     onLogTypeFilterSelected: (LogTypeFilter) -> Unit,
     onClearFilters: () -> Unit,
@@ -521,20 +531,21 @@ fun MapFilterSection(
                 )
             }
 
-            // Row 3: Date Range & Type
+            // Row 3: Date Filter
+            DateFilterControls(
+                selectedFilter = dateFilter,
+                onFilterChange = onDateFilterChange,
+                availableMonths = availableMonths,
+                availableYears = availableYears,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Row 4: Type
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DropdownFilter(
-                    label = "Date",
-                    selectedOption = selectedDateRange,
-                    options = dateRangeOptions,
-                    onOptionSelected = onDateRangeSelected,
-                    modifier = Modifier.width(140.dp)
-                )
-                
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilterChip(
                         selected = logTypeFilter == LogTypeFilter.ALL,
@@ -555,30 +566,16 @@ fun MapFilterSection(
                         shape = RoundedCornerShape(8.dp)
                     )
                 }
-            }
-            
-            TextButton(
-                onClick = onClearFilters, 
-                modifier = Modifier.align(Alignment.End),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Text("Clear All Filters", style = MaterialTheme.typography.labelLarge)
+                
+                TextButton(
+                    onClick = onClearFilters, 
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Text("Clear All", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }
-}
-
-private fun isSameDay(t1: Long, t2: Long): Boolean {
-    val cal1 = Calendar.getInstance().apply { timeInMillis = t1 }
-    val cal2 = Calendar.getInstance().apply { timeInMillis = t2 }
-    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
-}
-
-private fun isSameYear(t1: Long, t2: Long): Boolean {
-    val cal1 = Calendar.getInstance().apply { timeInMillis = t1 }
-    val cal2 = Calendar.getInstance().apply { timeInMillis = t2 }
-    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR)
 }
 
 private fun formatTimestamp(timestamp: Long): String {

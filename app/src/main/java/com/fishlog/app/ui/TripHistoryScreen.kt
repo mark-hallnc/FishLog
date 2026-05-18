@@ -19,6 +19,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.ui.DateRangeFilter
+import com.fishlog.app.ui.DateFilterControls
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -36,12 +38,29 @@ fun TripHistoryScreen(
     var searchQuery by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf("All Trips") }
     var waterBodyFilter by remember { mutableStateOf("All Water Bodies") }
+    var dateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
 
     val waterBodies = remember(trips) {
         listOf("All Water Bodies") + trips.map { it.waterBody }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
-    val filteredTrips = remember(trips, searchQuery, statusFilter, waterBodyFilter) {
+    val availableMonths = remember(trips) {
+        trips.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.startTime
+            DateRangeFilter.Month(cal.get(Calendar.MONTH), cal.get(Calendar.YEAR))
+        }.distinct().sortedByDescending { it.year * 12 + it.month }
+    }
+
+    val availableYears = remember(trips) {
+        trips.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.startTime
+            cal.get(Calendar.YEAR)
+        }.distinct().sortedDescending()
+    }
+
+    val filteredTrips = remember(trips, searchQuery, statusFilter, waterBodyFilter, dateFilter) {
         trips.filter { trip ->
             val matchesSearch = trip.name.contains(searchQuery, ignoreCase = true) ||
                     trip.waterBody.contains(searchQuery, ignoreCase = true) ||
@@ -55,7 +74,9 @@ fun TripHistoryScreen(
             
             val matchesWaterBody = if (waterBodyFilter == "All Water Bodies") true else trip.waterBody == waterBodyFilter
             
-            matchesSearch && matchesStatus && matchesWaterBody
+            val matchesDate = dateFilter.matches(trip.startTime)
+
+            matchesSearch && matchesStatus && matchesWaterBody && matchesDate
         }
     }
 
@@ -118,6 +139,14 @@ fun TripHistoryScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+
+                    DateFilterControls(
+                        selectedFilter = dateFilter,
+                        onFilterChange = { dateFilter = it },
+                        availableMonths = availableMonths,
+                        availableYears = availableYears,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     
                     Text(
                         text = "Showing ${filteredTrips.size} of ${trips.size} trips",

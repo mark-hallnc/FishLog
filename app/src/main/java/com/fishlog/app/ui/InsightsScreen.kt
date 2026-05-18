@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.ui.DateRangeFilter
+import com.fishlog.app.ui.DateFilterControls
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,6 +32,32 @@ fun InsightsScreen(
 ) {
     val logs by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
+
+    var dateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
+
+    val filteredLogs = remember(logs, dateFilter) {
+        logs.filter { dateFilter.matches(it.timestamp) }
+    }
+
+    val filteredTrips = remember(trips, dateFilter) {
+        trips.filter { dateFilter.matches(it.startTime) }
+    }
+
+    val availableMonths = remember(logs) {
+        logs.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.timestamp
+            DateRangeFilter.Month(cal.get(Calendar.MONTH), cal.get(Calendar.YEAR))
+        }.distinct().sortedByDescending { it.year * 12 + it.month }
+    }
+
+    val availableYears = remember(logs) {
+        logs.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.timestamp
+            cal.get(Calendar.YEAR)
+        }.distinct().sortedDescending()
+    }
 
     val isMetric = unitSystem == AppPreferences.UNITS_METRIC
     val tempSuffix = if (isMetric) "°C" else "°F"
@@ -90,14 +118,35 @@ fun InsightsScreen(
                     .navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SummarySection(logs)
-                TopSpeciesSection(logs)
-                TopBaitsSection(logs)
-                MonthlyActivitySection(logs)
-                EnvironmentalSection(logs, tempSuffix, depthSuffix)
-                LocationCoverageSection(logs)
-                TopWaterBodiesSection(trips)
-                TripInsightsSection(logs, trips)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    DateFilterControls(
+                        selectedFilter = dateFilter,
+                        onFilterChange = { dateFilter = it },
+                        availableMonths = availableMonths,
+                        availableYears = availableYears,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                if (filteredLogs.isEmpty() && filteredTrips.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("No logs match this date range.", color = MaterialTheme.colorScheme.secondary)
+                    }
+                } else {
+                    SummarySection(filteredLogs)
+                    TopSpeciesSection(filteredLogs)
+                    TopBaitsSection(filteredLogs)
+                    MonthlyActivitySection(filteredLogs)
+                    EnvironmentalSection(filteredLogs, tempSuffix, depthSuffix)
+                    LocationCoverageSection(filteredLogs)
+                    TopWaterBodiesSection(filteredTrips)
+                    TripInsightsSection(filteredLogs, filteredTrips)
+                }
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }

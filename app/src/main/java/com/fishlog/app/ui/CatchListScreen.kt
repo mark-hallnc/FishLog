@@ -22,8 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 enum class GpsFilter { ALL, WITH_LOCATION, WITHOUT_LOCATION }
 enum class LogTypeFilter { ALL, CATCHES_ONLY, NO_CATCH_ONLY }
@@ -42,6 +41,7 @@ fun CatchListScreen(
     var selectedBait by remember { mutableStateOf("All Baits") }
     var gpsFilter by remember { mutableStateOf(GpsFilter.ALL) }
     var logTypeFilter by remember { mutableStateOf(LogTypeFilter.ALL) }
+    var dateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
     var showFilters by remember { mutableStateOf(false) }
 
     val speciesList = remember(catches) {
@@ -52,7 +52,23 @@ fun CatchListScreen(
         listOf("All Baits") + catches.map { it.bait }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
-    val filteredCatches = remember(catches, searchQuery, selectedSpecies, selectedBait, gpsFilter, logTypeFilter) {
+    val availableMonths = remember(catches) {
+        catches.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.timestamp
+            DateRangeFilter.Month(cal.get(Calendar.MONTH), cal.get(Calendar.YEAR))
+        }.distinct().sortedByDescending { it.year * 12 + it.month }
+    }
+
+    val availableYears = remember(catches) {
+        catches.map {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.timestamp
+            cal.get(Calendar.YEAR)
+        }.distinct().sortedDescending()
+    }
+
+    val filteredCatches = remember(catches, searchQuery, selectedSpecies, selectedBait, gpsFilter, logTypeFilter, dateFilter) {
         catches.filter { catch ->
             val matchesSearch = if (searchQuery.isBlank()) true else {
                 val query = searchQuery.lowercase()
@@ -77,8 +93,9 @@ fun CatchListScreen(
                 LogTypeFilter.CATCHES_ONLY -> catch.logType == "CATCH"
                 LogTypeFilter.NO_CATCH_ONLY -> catch.logType == "NO_CATCH"
             }
+            val matchesDate = dateFilter.matches(catch.timestamp)
 
-            matchesSearch && matchesSpecies && matchesBait && matchesGps && matchesLogType
+            matchesSearch && matchesSpecies && matchesBait && matchesGps && matchesLogType && matchesDate
         }
     }
 
@@ -128,12 +145,17 @@ fun CatchListScreen(
                     onGpsFilterSelected = { gpsFilter = it },
                     logTypeFilter = logTypeFilter,
                     onLogTypeFilterSelected = { logTypeFilter = it },
+                    dateFilter = dateFilter,
+                    onDateFilterChange = { dateFilter = it },
+                    availableMonths = availableMonths,
+                    availableYears = availableYears,
                     onClearFilters = {
                         searchQuery = ""
                         selectedSpecies = "All Species"
                         selectedBait = "All Baits"
                         gpsFilter = GpsFilter.ALL
                         logTypeFilter = LogTypeFilter.ALL
+                        dateFilter = DateRangeFilter.AllDates
                     }
                 )
             }
@@ -216,6 +238,10 @@ fun FilterSection(
     onGpsFilterSelected: (GpsFilter) -> Unit,
     logTypeFilter: LogTypeFilter,
     onLogTypeFilterSelected: (LogTypeFilter) -> Unit,
+    dateFilter: DateRangeFilter,
+    onDateFilterChange: (DateRangeFilter) -> Unit,
+    availableMonths: List<DateRangeFilter.Month>,
+    availableYears: List<Int>,
     onClearFilters: () -> Unit
 ) {
     Card(
@@ -260,6 +286,14 @@ fun FilterSection(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            DateFilterControls(
+                selectedFilter = dateFilter,
+                onFilterChange = onDateFilterChange,
+                availableMonths = availableMonths,
+                availableYears = availableYears,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
