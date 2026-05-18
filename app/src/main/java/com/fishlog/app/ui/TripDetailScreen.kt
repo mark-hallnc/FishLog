@@ -31,11 +31,40 @@ fun TripDetailScreen(
     onLogClick: (CatchLog) -> Unit,
     onLogCatch: () -> Unit = {},
     onLogNoCatch: () -> Unit = {},
-    onTripEnded: (FishingTrip) -> Unit = {}
+    onTripEnded: (FishingTrip) -> Unit = {},
+    onEditTrip: (FishingTrip) -> Unit = {},
+    onTripDeleted: () -> Unit = {}
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val tripLogs = remember(catches, trip.id) {
         catches.filter { it.tripId == trip.id }
+    }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Trip?") },
+            text = { Text("This will delete the trip session but keep the catch and no-catch logs. Those logs will no longer be attached to this trip.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteTrip(trip)
+                        onTripDeleted()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete Trip")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -47,10 +76,19 @@ fun TripDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { onEditTrip(trip) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Trip")
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Trip")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }

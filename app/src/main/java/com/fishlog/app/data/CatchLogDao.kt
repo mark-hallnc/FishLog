@@ -20,5 +20,8 @@ interface CatchLogDao {
 
     @Delete
     suspend fun deleteCatch(catchLog: CatchLog)
+
+    @Query("UPDATE catch_logs SET tripId = NULL WHERE tripId = :tripId")
+    suspend fun clearTripIdForLogs(tripId: Long)
 }
 

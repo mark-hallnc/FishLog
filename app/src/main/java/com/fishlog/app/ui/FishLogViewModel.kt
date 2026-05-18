@@ -80,6 +80,7 @@ class FishLogViewModel(
 
     fun deleteTrip(trip: FishingTrip) {
         viewModelScope.launch {
+            catchLogDao.clearTripIdForLogs(trip.id)
             fishingTripDao.deleteTrip(trip)
         }
     }

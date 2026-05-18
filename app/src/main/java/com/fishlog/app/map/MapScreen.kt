@@ -18,9 +18,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.location.LocationService
 import com.fishlog.app.ui.DropdownFilter
 import com.fishlog.app.ui.FishLogViewModel
 import com.fishlog.app.ui.LogTypeFilter
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -38,6 +40,8 @@ fun MapScreen(
     onLogClick: (CatchLog) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val locationService = remember { LocationService(context) }
     val catches by viewModel.allCatches.collectAsState()
 
     var selectedSpecies by remember { mutableStateOf("All Species") }
@@ -84,18 +88,32 @@ fun MapScreen(
 
     // Track initial load and filter changes for recentering
     var initialCenterApplied by remember { mutableStateOf(false) }
-    val filterKey = remember(selectedSpecies, selectedBait, logTypeFilter) {
-        "$selectedSpecies-$selectedBait-$logTypeFilter"
+
+    fun centerOnUser() {
+        scope.launch {
+            val location = locationService.getCurrentLocation()
+            if (location != null) {
+                mapView.controller.setCenter(GeoPoint(location.latitude, location.longitude))
+                mapView.controller.setZoom(15.0)
+            } else {
+                // Fallback to most recent log if available
+                if (filteredLogs.isNotEmpty()) {
+                    val mostRecentLog = filteredLogs.maxBy { it.timestamp }
+                    mapView.controller.setCenter(GeoPoint(mostRecentLog.latitude!!, mostRecentLog.longitude!!))
+                    mapView.controller.setZoom(12.0)
+                } else {
+                    // Fallback to NC
+                    mapView.controller.setCenter(GeoPoint(35.9557, -80.0053))
+                    mapView.controller.setZoom(12.0)
+                }
+            }
+            initialCenterApplied = true
+        }
     }
 
-    LaunchedEffect(filterKey, filteredLogs.isEmpty()) {
-        if (filteredLogs.isNotEmpty()) {
-            val mostRecentLog = filteredLogs.maxBy { it.timestamp }
-            mapView.controller.setCenter(GeoPoint(mostRecentLog.latitude!!, mostRecentLog.longitude!!))
-            if (!initialCenterApplied || mapView.zoomLevelDouble < 10.0) {
-                mapView.controller.setZoom(12.0)
-                initialCenterApplied = true
-            }
+    LaunchedEffect(Unit) {
+        if (!initialCenterApplied) {
+            centerOnUser()
         }
     }
 
@@ -115,6 +133,9 @@ fun MapScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { centerOnUser() }) {
+                        Icon(Icons.Default.MyLocation, contentDescription = "Center on Me")
+                    }
                     IconButton(onClick = { showFilters = !showFilters }) {
                         Icon(
                             imageVector = if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,

@@ -38,6 +38,7 @@ import com.fishlog.app.ui.StartTripScreen
 import com.fishlog.app.ui.TripDetailScreen
 import com.fishlog.app.ui.TripHistoryScreen
 import com.fishlog.app.ui.TripSummaryScreen
+import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.BackupScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
@@ -149,6 +150,24 @@ fun MainScreen(viewModel: FishLogViewModel) {
                     onTripEnded = { endedTrip ->
                         selectedTrip = endedTrip
                         currentScreen = "TripSummary"
+                    },
+                    onEditTrip = { trip ->
+                        selectedTrip = trip
+                        currentScreen = "EditTrip"
+                    },
+                    onTripDeleted = {
+                        currentScreen = "Home"
+                    }
+                )
+            } ?: run { currentScreen = "Home" }
+            "EditTrip" -> selectedTrip?.let { trip ->
+                EditTripScreen(
+                    trip = trip,
+                    viewModel = viewModel,
+                    onBack = { currentScreen = "TripDetail" },
+                    onSave = { updatedTrip ->
+                        selectedTrip = updatedTrip
+                        currentScreen = "TripDetail"
                     }
                 )
             } ?: run { currentScreen = "Home" }
