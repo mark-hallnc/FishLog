@@ -247,6 +247,10 @@ fun MainScreen(
                     selectedCatch = catch
                     previousScreen = "Map"
                     currentScreen = "Detail"
+                },
+                onTripClick = { trip ->
+                    selectedTrip = trip
+                    currentScreen = "TripDetail"
                 }
             )
             "Insights" -> InsightsScreen(
