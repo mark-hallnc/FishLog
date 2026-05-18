@@ -30,6 +30,7 @@ import com.fishlog.app.ui.InsightsScreen
 import com.fishlog.app.ui.StartTripScreen
 import com.fishlog.app.ui.TripDetailScreen
 import com.fishlog.app.ui.TripHistoryScreen
+import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.BackupScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
@@ -77,6 +78,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
     var currentScreen by remember { mutableStateOf("Home") }
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         val modifier = Modifier.padding(innerPadding)
@@ -102,6 +104,10 @@ fun MainScreen(viewModel: FishLogViewModel) {
                     selectedTrip = trip
                     currentScreen = "TripDetail"
                 },
+                onEndTripClick = { trip ->
+                    selectedTrip = trip.copy(endTime = System.currentTimeMillis())
+                    currentScreen = "TripSummary"
+                },
                 modifier = modifier
             )
             "StartTrip" -> StartTripScreen(
@@ -125,6 +131,10 @@ fun MainScreen(viewModel: FishLogViewModel) {
                     onLogNoCatch = {
                         selectedCatch = null
                         currentScreen = "NoCatchForm"
+                    },
+                    onTripEnded = { endedTrip ->
+                        selectedTrip = endedTrip
+                        currentScreen = "TripSummary"
                     }
                 )
             } ?: run { currentScreen = "Home" }
@@ -186,6 +196,14 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 },
                 onStartTripClick = { currentScreen = "StartTrip" }
             )
+            "TripSummary" -> selectedTrip?.let { trip ->
+                TripSummaryScreen(
+                    trip = trip,
+                    viewModel = viewModel,
+                    onDone = { currentScreen = "Home" },
+                    onViewDetails = { currentScreen = "TripDetail" }
+                )
+            } ?: run { currentScreen = "Home" }
         }
     }
 }
@@ -203,6 +221,7 @@ fun HomeScreen(
     onTripHistoryClick: () -> Unit,
     onStartTripClick: () -> Unit,
     onViewTripClick: (FishingTrip) -> Unit,
+    onEndTripClick: (FishingTrip) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activeTrip by viewModel.activeTrip.collectAsState()
@@ -236,7 +255,14 @@ fun HomeScreen(
             activeTrip = activeTrip,
             onStartTrip = onStartTripClick,
             onEndTrip = {
-                activeTrip?.let { viewModel.endTrip(it) }
+                // TripStatusCard expect a suspend lambda.
+                // onEndTripClick is not suspend, but we don't need it to be if it handles its own scope or if we just want it to return immediately.
+                // However, TripStatusCard waits for onEndTrip() to complete before resetting isEndingTrip.
+                // So let's make onEndTripClick suspend or just call viewModel here.
+                activeTrip?.let { trip ->
+                    viewModel.endTrip(trip)
+                    onEndTripClick(trip)
+                }
             },
             onViewTrip = { activeTrip?.let { onViewTripClick(it) } },
             onLogCatch = onLogCatchClick,

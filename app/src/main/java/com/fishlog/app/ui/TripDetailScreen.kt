@@ -30,7 +30,8 @@ fun TripDetailScreen(
     onBack: () -> Unit,
     onLogClick: (CatchLog) -> Unit,
     onLogCatch: () -> Unit = {},
-    onLogNoCatch: () -> Unit = {}
+    onLogNoCatch: () -> Unit = {},
+    onTripEnded: (FishingTrip) -> Unit = {}
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val tripLogs = remember(catches, trip.id) {
@@ -121,7 +122,7 @@ fun TripDetailScreen(
                         scope.launch {
                             try {
                                 viewModel.endTrip(trip)
-                                onBack() // Navigate back after success
+                                onTripEnded(trip.copy(endTime = System.currentTimeMillis()))
                             } catch (e: Exception) {
                                 isEndingTrip = false
                                 // Optional: Show error
