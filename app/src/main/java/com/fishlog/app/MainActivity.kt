@@ -76,6 +76,7 @@ fun MainScreen(viewModel: FishLogViewModel) {
     val context = LocalContext.current
     val photoStorageHelper = remember { PhotoStorageHelper(context) }
     var currentScreen by remember { mutableStateOf("Home") }
+    var previousScreen by remember { mutableStateOf("Home") }
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
     val scope = rememberCoroutineScope()
@@ -93,8 +94,14 @@ fun MainScreen(viewModel: FishLogViewModel) {
                     selectedCatch = null
                     currentScreen = "NoCatchForm"
                 },
-                onHistoryClick = { currentScreen = "History" },
-                onMapClick = { currentScreen = "Map" },
+                onHistoryClick = { 
+                    previousScreen = "Home"
+                    currentScreen = "History" 
+                },
+                onMapClick = { 
+                    previousScreen = "Home"
+                    currentScreen = "Map" 
+                },
                 onInsightsClick = { currentScreen = "Insights" },
                 onBackupClick = { currentScreen = "Backup" },
                 onExportClick = { currentScreen = "Export" },
@@ -153,25 +160,31 @@ fun MainScreen(viewModel: FishLogViewModel) {
                 onBack = { currentScreen = "Home" },
                 onCatchClick = { catch ->
                     selectedCatch = catch
+                    previousScreen = "History"
                     currentScreen = "Detail"
                 }
             )
             "Detail" -> selectedCatch?.let { catch ->
                 CatchDetailScreen(
                     catch = catch,
-                    onBack = { currentScreen = "History" },
+                    onBack = { currentScreen = previousScreen },
                     onEdit = { 
                         currentScreen = if (catch.logType == "NO_CATCH") "NoCatchForm" else "Form"
                     },
                     onDelete = {
                         viewModel.deleteCatch(catch, photoStorageHelper)
-                        currentScreen = "History"
+                        currentScreen = previousScreen
                     }
                 )
-            } ?: run { currentScreen = "History" }
+            } ?: run { currentScreen = previousScreen }
             "Map" -> MapScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = "Home" }
+                onBack = { currentScreen = "Home" },
+                onLogClick = { catch ->
+                    selectedCatch = catch
+                    previousScreen = "Map"
+                    currentScreen = "Detail"
+                }
             )
             "Insights" -> InsightsScreen(
                 viewModel = viewModel,

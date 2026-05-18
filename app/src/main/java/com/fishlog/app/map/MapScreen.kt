@@ -34,7 +34,8 @@ import java.util.Locale
 @Composable
 fun MapScreen(
     viewModel: FishLogViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onLogClick: (CatchLog) -> Unit
 ) {
     val context = LocalContext.current
     val catches by viewModel.allCatches.collectAsState()
@@ -186,6 +187,11 @@ fun MapScreen(
                             // Visual distinction for no-catch
                             if (isNoCatch) {
                                 marker.icon = context.getDrawable(org.osmdroid.library.R.drawable.marker_default_focused_base)
+                            }
+                            
+                            marker.setOnMarkerClickListener { _, _ ->
+                                onLogClick(log)
+                                true
                             }
                             
                             view.overlays.add(marker)
