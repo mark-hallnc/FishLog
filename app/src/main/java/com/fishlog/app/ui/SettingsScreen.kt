@@ -18,7 +18,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fishlog.app.data.AccountStatus
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.data.BackupUiState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,8 +187,8 @@ fun SettingsScreen(
             SettingsSection(title = "Data & Backup") {
                 SettingRow(
                     icon = Icons.Default.CloudUpload,
-                    title = "Backup & Account",
-                    subtitle = "Cloud & Local status",
+                    title = "Backup & Account (Local Files)",
+                    subtitle = "Manage local backups",
                     onClick = onBackupClick
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -196,6 +198,150 @@ fun SettingsScreen(
                     subtitle = "CSV & JSON",
                     onClick = onExportClick
                 )
+            }
+
+            // Account & Cloud Backup
+            SettingsSection(title = "Account & Cloud Backup") {
+                Text(
+                    text = "FishLog works fully offline without an account. Sign in later to optionally back up your logs to the cloud and restore them on a new device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                if (viewModel.accountStatus == AccountStatus.SIGNED_OUT) {
+                    var email by remember { mutableStateOf("") }
+                    val isEmailValid = email.contains("@") && email.isNotBlank()
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email Address") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                        ),
+                        isError = email.isNotBlank() && !isEmailValid
+                    )
+                    
+                    if (email.isNotBlank() && !isEmailValid) {
+                        Text(
+                            text = "Enter a valid email address.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
+                                              viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { viewModel.createAccount(email) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = isEmailValid && !isOperationInProgress
+                        ) {
+                            Text("Create Account")
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.signIn(email) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = isEmailValid && !isOperationInProgress
+                        ) {
+                            Text("Sign In")
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Signed in as:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Text(
+                        text = viewModel.accountEmail ?: "Unknown",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
+                                              viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { viewModel.backupNow() },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isOperationInProgress
+                        ) {
+                            if (viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Backing up...")
+                            } else {
+                                Text("Backup Now")
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.restoreFromCloud() },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isOperationInProgress
+                        ) {
+                            if (viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Restoring...")
+                            } else {
+                                Text("Restore")
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = { viewModel.signOut() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isOperationInProgress
+                    ) {
+                        Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
+                viewModel.backupStatusMessage?.let { message ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (viewModel.backupUiState == BackupUiState.ERROR) 
+                                MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = message,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.clearBackupMessage() }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
             }
 
             // Developer Tools
@@ -228,26 +374,8 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Remove Sample")
+                        Text("Remove Sample Data")
                     }
-                }
-            }
-
-            // Cloud Account Placeholder
-            SettingsSection(title = "Cloud Account") {
-                Text(
-                    text = "Coming later: optional email sign-in for cloud backup and restore. FishLog will continue to work offline without an account.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { },
-                    enabled = false,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Sign in with Email")
                 }
             }
 

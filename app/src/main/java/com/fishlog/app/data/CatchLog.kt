@@ -31,6 +31,8 @@ data class CatchLog(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val deletedAt: Long? = null,
-    val backupStatus: String = BackupStatus.PENDING_BACKUP
+    val backupStatus: String = BackupStatus.PENDING_BACKUP,
+    val cloudId: String? = null,
+    val lastSyncedAt: Long? = null
 )
 

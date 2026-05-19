@@ -1,11 +1,11 @@
 package com.fishlog.app.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fishlog.app.data.CatchLog
-import com.fishlog.app.data.CatchLogDao
-import com.fishlog.app.data.FishingTrip
-import com.fishlog.app.data.FishingTripDao
+import com.fishlog.app.data.*
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -14,8 +14,22 @@ import kotlinx.coroutines.launch
 
 class FishLogViewModel(
     private val catchLogDao: CatchLogDao,
-    private val fishingTripDao: FishingTripDao
+    private val fishingTripDao: FishingTripDao,
+    private val cloudBackupRepository: CloudBackupRepository
 ) : ViewModel() {
+
+    // Account & Backup States
+    var accountStatus by mutableStateOf(if (cloudBackupRepository.isSignedIn()) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT)
+        private set
+    
+    var accountEmail by mutableStateOf(cloudBackupRepository.getCurrentAccountEmail())
+        private set
+
+    var backupUiState by mutableStateOf(BackupUiState.IDLE)
+        private set
+
+    var backupStatusMessage by mutableStateOf<String?>(null)
+        private set
 
     val allCatches: StateFlow<List<CatchLog>> = catchLogDao.getAllCatches()
         .stateIn(
@@ -37,6 +51,82 @@ class FishLogViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    fun createAccount(email: String) {
+        viewModelScope.launch {
+            backupUiState = BackupUiState.BACKUP_IN_PROGRESS
+            val result = cloudBackupRepository.createAccount(email)
+            if (result.isSuccess) {
+                accountStatus = AccountStatus.SIGNED_IN
+                accountEmail = email
+                backupUiState = BackupUiState.SUCCESS
+                backupStatusMessage = "Account created successfully (Placeholder)"
+            } else {
+                backupUiState = BackupUiState.ERROR
+                backupStatusMessage = "Failed to create account"
+            }
+        }
+    }
+
+    fun signIn(email: String) {
+        viewModelScope.launch {
+            backupUiState = BackupUiState.BACKUP_IN_PROGRESS
+            val result = cloudBackupRepository.signIn(email)
+            if (result.isSuccess) {
+                accountStatus = AccountStatus.SIGNED_IN
+                accountEmail = email
+                backupUiState = BackupUiState.SUCCESS
+                backupStatusMessage = "Signed in successfully (Placeholder)"
+            } else {
+                backupUiState = BackupUiState.ERROR
+                backupStatusMessage = "Failed to sign in"
+            }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            cloudBackupRepository.signOut()
+            accountStatus = AccountStatus.SIGNED_OUT
+            accountEmail = null
+            backupUiState = BackupUiState.IDLE
+            backupStatusMessage = null
+        }
+    }
+
+    fun backupNow() {
+        viewModelScope.launch {
+            backupUiState = BackupUiState.BACKUP_IN_PROGRESS
+            backupStatusMessage = "Backing up..."
+            val result = cloudBackupRepository.backupNow()
+            if (result.isSuccess) {
+                backupUiState = BackupUiState.SUCCESS
+                backupStatusMessage = "Backup completed (Placeholder)"
+            } else {
+                backupUiState = BackupUiState.ERROR
+                backupStatusMessage = "Backup failed"
+            }
+        }
+    }
+
+    fun restoreFromCloud() {
+        viewModelScope.launch {
+            backupUiState = BackupUiState.RESTORE_IN_PROGRESS
+            backupStatusMessage = "Restoring..."
+            val result = cloudBackupRepository.restoreFromCloud()
+            if (result.isSuccess) {
+                backupUiState = BackupUiState.SUCCESS
+                backupStatusMessage = "Restore placeholder completed. Supabase integration coming next."
+            } else {
+                backupUiState = BackupUiState.ERROR
+                backupStatusMessage = "Restore failed"
+            }
+        }
+    }
+
+    fun clearBackupMessage() {
+        backupStatusMessage = null
+    }
 
     fun startTrip(
         name: String,
@@ -62,21 +152,31 @@ class FishLogViewModel(
                 windCondition = windCondition,
                 airTempF = airTempF,
                 waterClarity = waterClarity,
-                pressureTrend = pressureTrend
+                pressureTrend = pressureTrend,
+                updatedAt = System.currentTimeMillis(),
+                backupStatus = BackupStatus.PENDING_BACKUP
             )
             fishingTripDao.insertTrip(trip)
         }
     }
 
     suspend fun endTrip(trip: FishingTrip) {
-        fishingTripDao.updateTrip(trip.copy(endTime = System.currentTimeMillis(), updatedAt = System.currentTimeMillis()))
+        fishingTripDao.updateTrip(trip.copy(
+            endTime = System.currentTimeMillis(), 
+            updatedAt = System.currentTimeMillis(),
+            backupStatus = BackupStatus.PENDING_BACKUP
+        ))
     }
 
     fun updateTrip(trip: FishingTrip) {
         viewModelScope.launch {
-            fishingTripDao.updateTrip(trip.copy(updatedAt = System.currentTimeMillis()))
+            fishingTripDao.updateTrip(trip.copy(
+                updatedAt = System.currentTimeMillis(),
+                backupStatus = BackupStatus.PENDING_BACKUP
+            ))
         }
     }
+
 
     fun deleteTrip(trip: FishingTrip) {
         viewModelScope.launch {

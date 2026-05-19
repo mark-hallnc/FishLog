@@ -25,6 +25,8 @@ data class FishingTrip(
     val windCondition: String = "",
     val airTempF: Double? = null,
     val waterClarity: String = "",
-    val pressureTrend: String = ""
+    val pressureTrend: String = "",
+    val cloudId: String? = null,
+    val lastSyncedAt: Long? = null
 )
 
