@@ -15,9 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.fishlog.app.data.CatchLog
-import com.fishlog.app.data.FishingTrip
-import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.data.*
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.DateFilterControls
 import java.text.SimpleDateFormat
@@ -139,12 +137,17 @@ fun InsightsScreen(
                     }
                 } else {
                     SummarySection(filteredLogs)
-                    TopSpeciesSection(filteredLogs)
-                    TopBaitsSection(filteredLogs)
-                    MonthlyActivitySection(filteredLogs)
+                    BestWaterBodiesSection(filteredLogs, trips)
+                    BestSpeciesByWaterBodySection(filteredLogs, trips)
+                    BestBaitBySpeciesSection(filteredLogs)
+                    BestBaitByTempSection(filteredLogs)
+                    CatchRateByTripSection(filteredLogs, filteredTrips)
+                    CatchRateByDepthSection(filteredLogs)
+                    CatchRateByTimeSection(filteredLogs)
+                    BestMonthsSection(filteredLogs)
+                    MostProductiveTripsSection(filteredLogs, filteredTrips)
                     EnvironmentalSection(filteredLogs, tempSuffix, depthSuffix)
                     LocationCoverageSection(filteredLogs)
-                    TopWaterBodiesSection(filteredTrips)
                     TripInsightsSection(filteredLogs, filteredTrips)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
@@ -154,25 +157,428 @@ fun InsightsScreen(
 }
 
 @Composable
-fun TopWaterBodiesSection(trips: List<FishingTrip>) {
-    val topWaterBodies = trips
-        .filter { it.waterBody.isNotBlank() }
-        .map { it.waterBody.trim() }
-        .groupBy { it.lowercase() }
-        .map { group ->
-            // Use the most frequent original casing for display
-            val originalCasing = group.value.groupBy { it }.maxBy { it.value.size }.key
-            originalCasing to group.value.size
+fun SummarySection(logs: List<CatchLog>) {
+    val totalCatches = logs.count { it.logType == "CATCH" }
+    val totalNoCatches = logs.count { it.logType == "NO_CATCH" }
+    val totalLogs = logs.size
+    val catchRate = InsightsCalculator.calculateCatchRate(totalCatches, totalNoCatches)
+
+    InsightCard(title = "Total Logs") {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            StatItem("Catches", totalCatches.toString(), Modifier.weight(1f))
+            StatItem("No-Catch", totalNoCatches.toString(), Modifier.weight(1f))
+            StatItem("Success Rate", "$catchRate%", Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun BestWaterBodiesSection(logs: List<CatchLog>, allTrips: List<FishingTrip>) {
+    val data = remember(logs, allTrips) {
+        logs.filter { it.tripId != null }
+            .groupBy { log ->
+                val trip = allTrips.find { it.id == log.tripId }
+                trip?.waterBody?.let { InsightsCalculator.normalizeWaterBody(it) } ?: ""
+            }
+            .filter { it.key.isNotBlank() }
+            .map { (waterBody, logList) ->
+                val catches = logList.count { it.logType == "CATCH" }
+                val noCatches = logList.count { it.logType == "NO_CATCH" }
+                Triple(waterBody, catches, noCatches)
+            }
+            .sortedByDescending { it.second }
+            .take(5)
+    }
+
+    InsightCard(
+        title = "Best Water Bodies",
+        caption = "Ranked by successful catches from logs attached to trips."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough water body data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (name, catches, noCatches) ->
+                val rate = InsightsCalculator.calculateCatchRate(catches, noCatches)
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text("$catches catches", fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "$noCatches no-catch · $rate% catch rate",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BestSpeciesByWaterBodySection(logs: List<CatchLog>, allTrips: List<FishingTrip>) {
+    val data = remember(logs, allTrips) {
+        logs.filter { it.logType == "CATCH" && it.tripId != null }
+            .groupBy { log ->
+                val trip = allTrips.find { it.id == log.tripId }
+                trip?.waterBody?.let { InsightsCalculator.normalizeWaterBody(it) } ?: ""
+            }
+            .filter { it.key.isNotBlank() }
+            .mapValues { (_, logList) ->
+                logList.groupBy { it.species }
+                    .maxByOrNull { it.value.size }
+                    ?.let { it.key to it.value.size }
+            }
+            .mapNotNull { if (it.value != null) it.key to it.value!! else null }
+            .sortedByDescending { it.second.second }
+            .take(5)
+    }
+
+    InsightCard(
+        title = "Best Species by Water Body",
+        caption = "The most frequent successful catch per location."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough species and water body data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (waterBody, topSpeciesData) ->
+                val (species, count) = topSpeciesData
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(waterBody, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Top species: $species — $count catches",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BestBaitBySpeciesSection(logs: List<CatchLog>) {
+    val data = remember(logs) {
+        logs.filter { it.logType == "CATCH" && it.species.isNotBlank() && it.bait.isNotBlank() }
+            .groupBy { it.species }
+            .mapValues { (_, logList) ->
+                logList.groupBy { it.bait }
+                    .maxByOrNull { it.value.size }
+                    ?.let { it.key to it.value.size }
+            }
+            .mapNotNull { if (it.value != null) it.key to it.value!! else null }
+            .sortedByDescending { it.second.second }
+            .take(5)
+    }
+
+    InsightCard(
+        title = "Best Bait by Species",
+        caption = "Only successful catches are counted."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough bait and species data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (species, topBaitData) ->
+                val (bait, count) = topBaitData
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(species, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Best bait: $bait — $count catches",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BestBaitByTempSection(logs: List<CatchLog>) {
+    val data = remember(logs) {
+        logs.filter { it.logType == "CATCH" && it.waterTempF != null && it.bait.isNotBlank() }
+            .groupBy { InsightsCalculator.bucketWaterTemp(it.waterTempF)!! }
+            .mapValues { (_, logList) ->
+                logList.groupBy { it.bait }
+                    .maxByOrNull { it.value.size }
+                    ?.let { it.key to it.value.size }
+            }
+            .mapNotNull { if (it.value != null) it.key to it.value!! else null }
+            .sortedBy { it.first } // Temperature ascending
+    }
+
+    InsightCard(
+        title = "Best Bait by Water Temp",
+        caption = "Most successful lure for each temperature range."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough water temperature and bait data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (tempRange, topBaitData) ->
+                val (bait, count) = topBaitData
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(tempRange, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Best bait: $bait — $count catches",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CatchRateByTripSection(logs: List<CatchLog>, trips: List<FishingTrip>) {
+    val data = remember(logs, trips) {
+        trips.mapNotNull { trip ->
+            val tripLogs = logs.filter { it.tripId == trip.id }
+            if (tripLogs.isEmpty()) return@mapNotNull null
+            
+            val catches = tripLogs.count { it.logType == "CATCH" }
+            val noCatches = tripLogs.count { it.logType == "NO_CATCH" }
+            val rate = InsightsCalculator.calculateCatchRate(catches, noCatches)
+            
+            val subtitle = "${trip.name}${if (trip.waterBody.isNotBlank()) " · ${trip.waterBody}" else ""}"
+            Quadruple(subtitle, catches, noCatches, rate)
+        }
+        .sortedWith(compareByDescending<Quadruple<String, Int, Int, Int>> { it.fourth }.thenByDescending { it.second })
+        .take(5)
+    }
+
+    InsightCard(
+        title = "Catch Rate by Trip",
+        caption = "Percentage of logs that were successful catches for each trip."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough trip data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (name, catches, noCatches, rate) ->
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                        Text("$rate%", fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "$catches catches · $noCatches no-catch",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CatchRateByDepthSection(logs: List<CatchLog>) {
+    val data = remember(logs) {
+        logs.mapNotNull { log ->
+            InsightsCalculator.bucketDepth(log.depthFeet)?.let { it to log.logType }
+        }
+        .groupBy { it.first }
+        .map { (bucket, types) ->
+            val catches = types.count { it.second == "CATCH" }
+            val total = types.size
+            val rate = if (total > 0) (catches.toFloat() / total * 100).toInt() else 0
+            Triple(bucket, catches, rate)
+        }
+        .sortedBy { it.first }
+    }
+
+    InsightCard(
+        title = "Catch Rate by Depth",
+        caption = "Comparison of success across depth ranges."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough depth data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (bucket, catches, rate) ->
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(bucket, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text("$rate%", fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "$catches successful catches in this range",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CatchRateByTimeSection(logs: List<CatchLog>) {
+    val data = remember(logs) {
+        logs.groupBy { InsightsCalculator.bucketHour(it.timestamp) }
+            .map { (bucket, logList) ->
+                val catches = logList.count { it.logType == "CATCH" }
+                val total = logList.size
+                val rate = if (total > 0) (catches.toFloat() / total * 100).toInt() else 0
+                Triple(bucket, catches, rate)
+            }
+            .sortedBy { InsightsCalculator.getSortOrderForTime(it.first) }
+    }
+
+    InsightCard(
+        title = "Catch Rate by Time of Day",
+        caption = "Identifying peak feeding times from your local logs."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough time-of-day data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            data.forEach { (bucket, catches, rate) ->
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(bucket, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Text("$rate%", fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "$catches catches recorded",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BestMonthsSection(logs: List<CatchLog>) {
+    val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+    val monthOnlyFormat = SimpleDateFormat("MMMM", Locale.getDefault())
+    
+    val successfulLogs = remember(logs) { logs.filter { it.logType == "CATCH" } }
+    
+    val monthYearData = remember(successfulLogs) {
+        successfulLogs
+            .groupBy { 
+                val cal = Calendar.getInstance()
+                cal.timeInMillis = it.timestamp
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis
+            }
+            .map { (timestamp, logList) ->
+                monthFormat.format(Date(timestamp)) to logList.size
+            }
+            .sortedByDescending { it.second }
+            .take(6)
+    }
+
+    val bestMonthOverall = remember(successfulLogs) {
+        successfulLogs
+            .groupBy { 
+                val cal = Calendar.getInstance()
+                cal.timeInMillis = it.timestamp
+                cal.get(Calendar.MONTH)
+            }
+            .maxByOrNull { it.value.size }
+            ?.let { (monthIndex, logList) ->
+                val cal = Calendar.getInstance()
+                cal.set(Calendar.MONTH, monthIndex)
+                monthOnlyFormat.format(cal.time) to logList.size
+            }
+    }
+
+    InsightCard(
+        title = "Best Months",
+        caption = "Ranked by successful catch volume."
+    ) {
+        if (monthYearData.isEmpty()) {
+            Text("Not enough monthly data yet.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            bestMonthOverall?.let { (name, count) ->
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Analytics, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Best month overall: $name — $count catches",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            monthYearData.forEach { (monthName, count) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(monthName, style = MaterialTheme.typography.bodyLarge)
+                    Text("$count catches", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MostProductiveTripsSection(logs: List<CatchLog>, trips: List<FishingTrip>) {
+    val data = remember(logs, trips) {
+        trips.mapNotNull { trip ->
+            val tripLogs = logs.filter { it.tripId == trip.id }
+            val catches = tripLogs.count { it.logType == "CATCH" }
+            if (catches == 0) return@mapNotNull null
+            
+            val noCatches = tripLogs.count { it.logType == "NO_CATCH" }
+            
+            var catchPerHour: String? = null
+            if (trip.endTime != null) {
+                val durationHours = (trip.endTime - trip.startTime).toFloat() / (1000 * 60 * 60)
+                if (durationHours > 0.1f) {
+                    catchPerHour = String.format("%.1f", catches / durationHours)
+                }
+            }
+            
+            val info = "${trip.name}${if (trip.waterBody.isNotBlank()) " · ${trip.waterBody}" else ""}"
+            Triple(info, catches, Pair(noCatches, catchPerHour))
         }
         .sortedByDescending { it.second }
         .take(5)
+    }
 
-    InsightCard(title = "Top Water Bodies") {
-        if (topWaterBodies.isEmpty()) {
-            Text("Not enough data yet.", style = MaterialTheme.typography.bodySmall)
+    InsightCard(
+        title = "Most Productive Trips",
+        caption = "Sessions with the highest volume of successful catches."
+    ) {
+        if (data.isEmpty()) {
+            Text("Not enough trip catch data yet.", style = MaterialTheme.typography.bodySmall)
         } else {
-            topWaterBodies.forEach { (waterBody, count) ->
-                RankingRow(waterBody, count, trips.size)
+            data.forEach { (info, catches, extras) ->
+                val (noCatches, perHour) = extras
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(info, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                        Text("$catches catches", fontWeight = FontWeight.Bold)
+                    }
+                    val details = listOfNotNull(
+                        "$noCatches no-catch",
+                        perHour?.let { "$it catches/hour" }
+                    ).joinToString(" · ")
+                    Text(
+                        details,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         }
     }
@@ -203,123 +609,6 @@ fun TripInsightsSection(logs: List<CatchLog>, trips: List<FishingTrip>) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary
             )
-        }
-    }
-}
-
-@Composable
-fun InsightCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            content()
-        }
-    }
-}
-
-@Composable
-fun SummarySection(logs: List<CatchLog>) {
-    val totalCatches = logs.count { it.logType == "CATCH" }
-    val totalNoCatches = logs.count { it.logType == "NO_CATCH" }
-    val totalLogs = logs.size
-    val catchRate = if (totalLogs > 0) (totalCatches.toFloat() / totalLogs * 100).toInt() else 0
-
-    InsightCard(title = "Total Logs") {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            StatItem("Catches", totalCatches.toString(), Modifier.weight(1f))
-            StatItem("No-Catch", totalNoCatches.toString(), Modifier.weight(1f))
-            StatItem("Success Rate", "$catchRate%", Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-fun TopSpeciesSection(logs: List<CatchLog>) {
-    val topSpecies = logs
-        .filter { it.logType == "CATCH" && it.species.isNotBlank() }
-        .groupBy { it.species }
-        .mapValues { it.value.size }
-        .toList()
-        .sortedByDescending { it.second }
-        .take(5)
-
-    InsightCard(title = "Top Species") {
-        if (topSpecies.isEmpty()) {
-            Text("Not enough data yet.", style = MaterialTheme.typography.bodySmall)
-        } else {
-            topSpecies.forEach { (species, count) ->
-                RankingRow(species, count, logs.count { it.logType == "CATCH" })
-            }
-        }
-    }
-}
-
-@Composable
-fun TopBaitsSection(logs: List<CatchLog>) {
-    val topBaits = logs
-        .filter { it.logType == "CATCH" && it.bait.isNotBlank() }
-        .groupBy { it.bait }
-        .mapValues { it.value.size }
-        .toList()
-        .sortedByDescending { it.second }
-        .take(5)
-
-    InsightCard(title = "Top Baits & Lures") {
-        if (topBaits.isEmpty()) {
-            Text("Not enough data yet.", style = MaterialTheme.typography.bodySmall)
-        } else {
-            topBaits.forEach { (bait, count) ->
-                RankingRow(bait, count, logs.count { it.logType == "CATCH" })
-            }
-        }
-    }
-}
-
-@Composable
-fun MonthlyActivitySection(logs: List<CatchLog>) {
-    val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-    val monthlyData = logs
-        .filter { it.logType == "CATCH" }
-        .groupBy { 
-            val cal = Calendar.getInstance()
-            cal.timeInMillis = it.timestamp
-            cal.set(Calendar.DAY_OF_MONTH, 1)
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            cal.timeInMillis
-        }
-        .mapValues { it.value.size }
-        .toList()
-        .sortedByDescending { it.first }
-        .take(6)
-
-    InsightCard(title = "Catches by Month") {
-        if (monthlyData.isEmpty()) {
-            Text("Not enough data yet.", style = MaterialTheme.typography.bodySmall)
-        } else {
-            monthlyData.forEach { (timestamp, count) ->
-                val monthName = monthFormat.format(Date(timestamp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(monthName, style = MaterialTheme.typography.bodyLarge)
-                    Text(count.toString(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
-                }
-            }
         }
     }
 }
@@ -373,6 +662,40 @@ fun LocationCoverageSection(logs: List<CatchLog>) {
 }
 
 @Composable
+fun InsightCard(
+    title: String, 
+    caption: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (caption != null) {
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            content()
+        }
+    }
+}
+
+@Composable
 fun StatItem(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
@@ -389,7 +712,7 @@ fun RankingRow(label: String, count: Int, total: Int) {
             Text(count.toString(), fontWeight = FontWeight.Bold)
         }
         LinearProgressIndicator(
-            progress = progress,
+            progress = { progress },
             modifier = Modifier.fillMaxWidth().height(8.dp).padding(top = 4.dp),
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
             color = MaterialTheme.colorScheme.tertiary,
@@ -398,3 +721,4 @@ fun RankingRow(label: String, count: Int, total: Int) {
     }
 }
 
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
