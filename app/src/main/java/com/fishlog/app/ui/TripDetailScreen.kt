@@ -157,7 +157,7 @@ fun TripDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
+                Button(
                     onClick = { onEditTrip(trip) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)

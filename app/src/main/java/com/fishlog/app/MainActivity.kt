@@ -122,6 +122,7 @@ fun MainScreen(
     val photoStorageHelper = remember { PhotoStorageHelper(context) }
     var currentScreen by remember { mutableStateOf("Home") }
     var previousScreen by remember { mutableStateOf("Home") }
+    var previousTripScreen by remember { mutableStateOf("Home") }
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
     var focusedLogOnMap by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
@@ -158,6 +159,7 @@ fun MainScreen(
                 onStartTripClick = { currentScreen = "StartTrip" },
                 onViewTripClick = { trip ->
                     selectedTrip = trip
+                    previousTripScreen = "Home"
                     currentScreen = "TripDetail"
                 },
                 onEndTripClick = { trip ->
@@ -176,7 +178,7 @@ fun MainScreen(
                     trip = trip,
                     viewModel = viewModel,
                     unitSystem = unitSystem,
-                    onBack = { currentScreen = "Home" },
+                    onBack = { currentScreen = previousTripScreen },
                     onLogClick = { catch ->
                         selectedCatch = catch
                         currentScreen = "Detail"
@@ -304,6 +306,7 @@ fun MainScreen(
                 onBack = { currentScreen = "Home" },
                 onTripClick = { trip ->
                     selectedTrip = trip
+                    previousTripScreen = "TripHistory"
                     currentScreen = "TripDetail"
                 },
                 onStartTripClick = { currentScreen = "StartTrip" }
@@ -314,7 +317,10 @@ fun MainScreen(
                     viewModel = viewModel,
                     unitSystem = unitSystem,
                     onDone = { currentScreen = "Home" },
-                    onViewDetails = { currentScreen = "TripDetail" }
+                    onViewDetails = { 
+                        previousTripScreen = "Home"
+                        currentScreen = "TripDetail" 
+                    }
                 )
             } ?: run { currentScreen = "Home" }
             "Settings" -> SettingsScreen(
@@ -492,8 +498,6 @@ fun HomeScreen(
                     title = "Log Catch",
                     subtitle = "Got one!",
                     icon = Icons.Default.AddCircle,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     onClick = onLogCatchClick
                 )
             }
