@@ -172,7 +172,17 @@ fun TripSummaryScreen(
                         }
                     }
                 }
-            } else {
+            }
+
+            if (trip.moonPhaseName.isNotBlank()) {
+                InsightCard(title = "Moon") {
+                    Text(
+                        text = "${trip.moonPhaseName} · ${trip.moonIlluminationPercent?.toInt() ?: 0}% illuminated",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+ else {
                 Text(
                     "Conditions not recorded.",
                     style = MaterialTheme.typography.bodySmall,

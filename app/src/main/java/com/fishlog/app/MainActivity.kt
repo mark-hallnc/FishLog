@@ -56,6 +56,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.fishlog.app.data.FishLogDatabase
 import com.fishlog.app.data.CloudBackupRepository
+import com.fishlog.app.data.WeatherRepository
 import com.fishlog.app.ui.FishLogViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -70,11 +71,12 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
         val cloudBackupRepository = CloudBackupRepository(applicationContext)
+        val weatherRepository = WeatherRepository()
         setContent {
             val viewModel: FishLogViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        return FishLogViewModel(catchDao, tripDao, cloudBackupRepository) as T
+                        return FishLogViewModel(catchDao, tripDao, cloudBackupRepository, weatherRepository) as T
                     }
                 }
             )

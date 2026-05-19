@@ -275,6 +275,21 @@ fun TripDetailScreen(
                 }
             }
 
+            if (trip.moonPhaseName.isNotBlank()) {
+                InsightCard(title = "Moon") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            StatItem("Phase", trip.moonPhaseName, Modifier.weight(1f))
+                            StatItem("Illumination", "${trip.moonIlluminationPercent?.toInt() ?: 0}%", Modifier.weight(1f))
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            StatItem("Moon Age", "${String.format("%.1f", trip.moonAgeDays ?: 0.0)} days", Modifier.weight(1f))
+                            StatItem("Trend", if (trip.moonWaxing == true) "Waxing" else "Waning", Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
             if (trip.notes.isNotBlank()) {
                 InsightCard(title = "Notes") {
                     Text(trip.notes, style = MaterialTheme.typography.bodyLarge)

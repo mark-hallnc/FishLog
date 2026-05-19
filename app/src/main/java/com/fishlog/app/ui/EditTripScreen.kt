@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
+import com.fishlog.app.data.WeatherData
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +34,7 @@ fun EditTripScreen(
     var waterBody by remember { mutableStateOf(trip.waterBody) }
     var notes by remember { mutableStateOf(trip.notes) }
     var isSaving by remember { mutableStateOf(false) }
+    var fetchedWeatherData by remember { mutableStateOf<WeatherData?>(null) }
 
     var skyCondition by remember { mutableStateOf(trip.skyCondition) }
     var windCondition by remember { mutableStateOf(trip.windCondition) }
@@ -157,6 +159,45 @@ fun EditTripScreen(
                         onOptionSelected = { pressureTrend = it },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    var weatherMessage by remember { mutableStateOf<String?>(null) }
+                    var isWeatherLoading by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isWeatherLoading = true
+                                weatherMessage = "Fetching weather..."
+                                if (trip.latitude != null && trip.longitude != null) {
+                                    val result = viewModel.fetchWeather(trip.latitude, trip.longitude, trip.startTime)
+                                    if (result.isSuccess) {
+                                        val data = result.getOrNull()!!
+                                        fetchedWeatherData = data
+                                        airTemp = data.airTempF?.toString() ?: airTemp
+                                        weatherMessage = "Weather auto-filled."
+                                    } else {
+                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather unavailable."
+                                    }
+                                } else {
+                                    weatherMessage = "Trip location not saved."
+                                }
+                                isWeatherLoading = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isWeatherLoading
+                    ) {
+                        if (isWeatherLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Auto-fill Weather")
+                        }
+                    }
+
+                    weatherMessage?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    }
                 }
             }
 
@@ -178,7 +219,7 @@ fun EditTripScreen(
                                 updatedAt = System.currentTimeMillis(),
                                 backupStatus = com.fishlog.app.data.BackupStatus.PENDING_BACKUP
                             )
-                            viewModel.updateTrip(updatedTrip)
+                            viewModel.updateTrip(updatedTrip, fetchedWeatherData)
                             onSave(updatedTrip)
                         } finally {
                             isSaving = false

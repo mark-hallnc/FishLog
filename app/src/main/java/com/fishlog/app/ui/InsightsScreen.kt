@@ -137,6 +137,7 @@ fun InsightsScreen(
                     }
                 } else {
                     SummarySection(filteredLogs)
+                    DataCoverageSection(filteredTrips)
                     BestWaterBodiesSection(filteredLogs, trips)
                     BestSpeciesByWaterBodySection(filteredLogs, trips)
                     BestBaitBySpeciesSection(filteredLogs)
@@ -152,6 +153,25 @@ fun InsightsScreen(
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun DataCoverageSection(trips: List<FishingTrip>) {
+    val total = trips.size
+    if (total == 0) return
+
+    val moonCount = trips.count { it.moonPhaseName.isNotBlank() }
+    val weatherCount = trips.count { it.weatherAutoFilled || it.airTempF != null }
+
+    InsightCard(
+        title = "Condition Data Coverage",
+        caption = "Tracking how many trips have environmental data recorded."
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            StatItem("Moon", "$moonCount/$total", Modifier.weight(1f))
+            StatItem("Weather", "$weatherCount/$total", Modifier.weight(1f))
         }
     }
 }

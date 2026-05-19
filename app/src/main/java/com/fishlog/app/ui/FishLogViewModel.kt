@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 class FishLogViewModel(
     private val catchLogDao: CatchLogDao,
     private val fishingTripDao: FishingTripDao,
-    private val cloudBackupRepository: CloudBackupRepository
+    private val cloudBackupRepository: CloudBackupRepository,
+    private val weatherRepository: WeatherRepository
 ) : ViewModel() {
 
     // Account & Backup States
@@ -128,6 +129,10 @@ class FishLogViewModel(
         backupStatusMessage = null
     }
 
+    suspend fun fetchWeather(lat: Double, lon: Double, timestamp: Long): Result<WeatherData> {
+        return weatherRepository.fetchWeatherForLocation(lat, lon, timestamp)
+    }
+
     fun startTrip(
         name: String,
         waterBody: String,
@@ -138,13 +143,17 @@ class FishLogViewModel(
         windCondition: String = "",
         airTempF: Double? = null,
         waterClarity: String = "",
-        pressureTrend: String = ""
+        pressureTrend: String = "",
+        weatherData: WeatherData? = null
     ) {
         viewModelScope.launch {
+            val startTime = System.currentTimeMillis()
+            val moonData = MoonPhaseCalculator.calculate(startTime)
+
             val trip = FishingTrip(
                 name = name,
                 waterBody = waterBody,
-                startTime = System.currentTimeMillis(),
+                startTime = startTime,
                 notes = notes,
                 latitude = latitude,
                 longitude = longitude,
@@ -154,7 +163,31 @@ class FishLogViewModel(
                 waterClarity = waterClarity,
                 pressureTrend = pressureTrend,
                 updatedAt = System.currentTimeMillis(),
-                backupStatus = BackupStatus.PENDING_BACKUP
+                backupStatus = BackupStatus.PENDING_BACKUP,
+                
+                // Moon phase auto-fill
+                moonAutoFilled = true,
+                moonPhaseName = moonData.phaseName,
+                moonIlluminationPercent = moonData.illuminationPercent,
+                moonAgeDays = moonData.ageDays,
+                moonPhaseFraction = moonData.phaseFraction,
+                moonWaxing = moonData.waxing,
+                moonCalculatedAt = moonData.calculatedAt,
+
+                // Weather auto-fill fields from repository data if available
+                weatherAutoFilled = weatherData != null,
+                weatherSource = weatherData?.source ?: "",
+                weatherFetchedAt = weatherData?.fetchedAt,
+                feelsLikeF = weatherData?.feelsLikeF,
+                humidityPercent = weatherData?.humidityPercent,
+                windSpeedMph = weatherData?.windSpeedMph,
+                windDirectionDegrees = weatherData?.windDirectionDegrees,
+                windGustMph = weatherData?.windGustMph,
+                barometricPressureHpa = weatherData?.barometricPressureHpa,
+                cloudCoverPercent = weatherData?.cloudCoverPercent,
+                precipitationIn = weatherData?.precipitationIn,
+                weatherCode = weatherData?.weatherCode,
+                weatherSummary = weatherData?.weatherSummary ?: ""
             )
             fishingTripDao.insertTrip(trip)
         }
@@ -168,12 +201,47 @@ class FishLogViewModel(
         ))
     }
 
-    fun updateTrip(trip: FishingTrip) {
+    fun updateTrip(trip: FishingTrip, weatherData: WeatherData? = null) {
         viewModelScope.launch {
-            fishingTripDao.updateTrip(trip.copy(
+            var updatedTrip = trip.copy(
                 updatedAt = System.currentTimeMillis(),
                 backupStatus = BackupStatus.PENDING_BACKUP
-            ))
+            )
+
+            // Apply weather data if provided (manually triggered auto-fill)
+            if (weatherData != null) {
+                updatedTrip = updatedTrip.copy(
+                    weatherAutoFilled = true,
+                    weatherSource = weatherData.source,
+                    weatherFetchedAt = weatherData.fetchedAt,
+                    feelsLikeF = weatherData.feelsLikeF,
+                    humidityPercent = weatherData.humidityPercent,
+                    windSpeedMph = weatherData.windSpeedMph,
+                    windDirectionDegrees = weatherData.windDirectionDegrees,
+                    windGustMph = weatherData.windGustMph,
+                    barometricPressureHpa = weatherData.barometricPressureHpa,
+                    cloudCoverPercent = weatherData.cloudCoverPercent,
+                    precipitationIn = weatherData.precipitationIn,
+                    weatherCode = weatherData.weatherCode,
+                    weatherSummary = weatherData.weatherSummary
+                )
+            }
+
+            // Auto-fill moon phase if missing
+            if (!updatedTrip.moonAutoFilled || updatedTrip.moonPhaseName.isBlank()) {
+                val moonData = MoonPhaseCalculator.calculate(updatedTrip.startTime)
+                updatedTrip = updatedTrip.copy(
+                    moonAutoFilled = true,
+                    moonPhaseName = moonData.phaseName,
+                    moonIlluminationPercent = moonData.illuminationPercent,
+                    moonAgeDays = moonData.ageDays,
+                    moonPhaseFraction = moonData.phaseFraction,
+                    moonWaxing = moonData.waxing,
+                    moonCalculatedAt = moonData.calculatedAt
+                )
+            }
+
+            fishingTripDao.updateTrip(updatedTrip)
         }
     }
 

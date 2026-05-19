@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.location.LocationService
+import com.fishlog.app.data.WeatherData
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -40,6 +41,7 @@ fun StartTripScreen(
     var waterBody by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
+    var fetchedWeatherData by remember { mutableStateOf<WeatherData?>(null) }
 
     var skyCondition by remember { mutableStateOf("") }
     var windCondition by remember { mutableStateOf("") }
@@ -189,6 +191,53 @@ fun StartTripScreen(
                         onOptionSelected = { pressureTrend = it },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    var weatherMessage by remember { mutableStateOf<String?>(null) }
+                    var isWeatherLoading by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isWeatherLoading = true
+                                weatherMessage = "Fetching weather..."
+                                val loc = locationService.getCurrentLocation()
+                                if (loc != null) {
+                                    val result = viewModel.fetchWeather(loc.latitude, loc.longitude, System.currentTimeMillis())
+                                    if (result.isSuccess) {
+                                        val data = result.getOrNull()!!
+                                        fetchedWeatherData = data
+                                        airTemp = data.airTempF?.toString() ?: airTemp
+                                        // Simple mapping for wind and sky could go here in future
+                                        weatherMessage = "Weather auto-filled."
+                                    } else {
+                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather unavailable."
+                                    }
+                                } else {
+                                    weatherMessage = "Enable GPS to auto-fill weather."
+                                }
+                                isWeatherLoading = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isWeatherLoading
+                    ) {
+                        if (isWeatherLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Auto-fill Weather")
+                        }
+                    }
+
+                    weatherMessage?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    }
+                    
+                    Text(
+                        "Weather auto-fill is prepared but not connected yet.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
                 }
             }
 
@@ -247,7 +296,8 @@ fun StartTripScreen(
                                 windCondition = windCondition,
                                 airTempF = airTemp.toDoubleOrNull(),
                                 waterClarity = waterClarity,
-                                pressureTrend = pressureTrend
+                                pressureTrend = pressureTrend,
+                                weatherData = fetchedWeatherData
                             )
                             onTripStarted()
                         } finally {

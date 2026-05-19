@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CatchLog::class, FishingTrip::class], version = 8, exportSchema = false)
+@Database(entities = [CatchLog::class, FishingTrip::class], version = 9, exportSchema = false)
 abstract class FishLogDatabase : RoomDatabase() {
     abstract fun catchLogDao(): CatchLogDao
     abstract fun fishingTripDao(): FishingTripDao
@@ -105,10 +105,38 @@ abstract class FishLogDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Weather fields
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN weatherAutoFilled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN weatherSource TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN weatherFetchedAt INTEGER")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN feelsLikeF REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN humidityPercent REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN windSpeedMph REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN windDirectionDegrees REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN windGustMph REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN barometricPressureHpa REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN cloudCoverPercent REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN precipitationIn REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN weatherCode INTEGER")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN weatherSummary TEXT NOT NULL DEFAULT ''")
+                
+                // Moon fields
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonAutoFilled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonPhaseName TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonIlluminationPercent REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonAgeDays REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonPhaseFraction REAL")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonWaxing INTEGER")
+                db.execSQL("ALTER TABLE fishing_trips ADD COLUMN moonCalculatedAt INTEGER")
+            }
+        }
+
         fun getDatabase(context: Context): FishLogDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, FishLogDatabase::class.java, "fishlog_database")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build()
                     .also { Instance = it }
             }
