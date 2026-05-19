@@ -199,21 +199,45 @@ fun StartTripScreen(
                         onClick = {
                             scope.launch {
                                 isWeatherLoading = true
-                                weatherMessage = "Fetching weather..."
+                                weatherMessage = "Fetching current weather..."
+                                
+                                // Try to get location
                                 val loc = locationService.getCurrentLocation()
                                 if (loc != null) {
-                                    val result = viewModel.fetchWeather(loc.latitude, loc.longitude, System.currentTimeMillis())
+                                    val result = viewModel.fetchWeather(loc.latitude, loc.longitude)
                                     if (result.isSuccess) {
                                         val data = result.getOrNull()!!
                                         fetchedWeatherData = data
-                                        airTemp = data.airTempF?.toString() ?: airTemp
-                                        // Simple mapping for wind and sky could go here in future
-                                        weatherMessage = "Weather auto-filled."
+                                        
+                                        // Overwrite manual fields
+                                        airTemp = data.airTempF?.let { "%.1f".format(it) } ?: airTemp
+                                        
+                                        // Map sky condition
+                                        val summary = data.weatherSummary
+                                        if (skyOptions.contains(summary)) {
+                                            skyCondition = summary
+                                        } else if (summary.contains("Cloudy")) {
+                                            skyCondition = "Cloudy"
+                                        } else if (summary.contains("Rain") || summary.contains("Showers")) {
+                                            skyCondition = "Rain"
+                                        } else if (summary.contains("Storm")) {
+                                            skyCondition = "Storms"
+                                        } else {
+                                            skyCondition = "Other"
+                                        }
+
+                                        // Map wind condition
+                                        val windDesc = viewModel.mapWindSpeedToCondition(data.windSpeedMph)
+                                        if (windOptions.contains(windDesc)) {
+                                            windCondition = windDesc
+                                        }
+
+                                        weatherMessage = "Weather auto-filled from Open-Meteo."
                                     } else {
-                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather unavailable."
+                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
                                     }
                                 } else {
-                                    weatherMessage = "Enable GPS to auto-fill weather."
+                                    weatherMessage = "Enable GPS and wait for location to auto-fill weather."
                                 }
                                 isWeatherLoading = false
                             }
@@ -223,18 +247,20 @@ fun StartTripScreen(
                         enabled = !isWeatherLoading
                     ) {
                         if (isWeatherLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Fetching...")
                         } else {
                             Text("Auto-fill Weather")
                         }
                     }
 
                     weatherMessage?.let {
-                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                     
                     Text(
-                        "Weather auto-fill is prepared but not connected yet.",
+                        "Auto-fill uses your current location to fetch data from Open-Meteo.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )

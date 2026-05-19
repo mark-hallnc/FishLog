@@ -129,8 +129,12 @@ class FishLogViewModel(
         backupStatusMessage = null
     }
 
-    suspend fun fetchWeather(lat: Double, lon: Double, timestamp: Long): Result<WeatherData> {
-        return weatherRepository.fetchWeatherForLocation(lat, lon, timestamp)
+    suspend fun fetchWeather(lat: Double, lon: Double): Result<WeatherData> {
+        return weatherRepository.fetchWeatherForLocation(lat, lon)
+    }
+
+    fun mapWindSpeedToCondition(speedMph: Double?): String {
+        return weatherRepository.mapWindSpeedToCondition(speedMph)
     }
 
     fun startTrip(

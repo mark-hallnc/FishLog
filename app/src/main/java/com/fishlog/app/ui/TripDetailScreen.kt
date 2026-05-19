@@ -290,6 +290,38 @@ fun TripDetailScreen(
                 }
             }
 
+            if (trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()) {
+                InsightCard(title = "Weather Details") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Source: ${trip.weatherSource.ifBlank { "Open-Meteo" }}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        
+                        if (trip.weatherSummary.isNotBlank()) {
+                            Text(trip.weatherSummary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            if (trip.feelsLikeF != null) StatItem("Feels Like", "${trip.feelsLikeF.toInt()}°F", Modifier.weight(1f))
+                            if (trip.humidityPercent != null) StatItem("Humidity", "${trip.humidityPercent.toInt()}%", Modifier.weight(1f))
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            if (trip.windSpeedMph != null) StatItem("Wind Speed", "${trip.windSpeedMph.toInt()} mph", Modifier.weight(1f))
+                            if (trip.windDirectionDegrees != null) StatItem("Wind Dir", "${trip.windDirectionDegrees.toInt()}°", Modifier.weight(1f))
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            if (trip.windGustMph != null) StatItem("Wind Gusts", "${trip.windGustMph.toInt()} mph", Modifier.weight(1f))
+                            if (trip.barometricPressureHpa != null) StatItem("Pressure", "${trip.barometricPressureHpa.toInt()} hPa", Modifier.weight(1f))
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            if (trip.cloudCoverPercent != null) StatItem("Cloud Cover", "${trip.cloudCoverPercent.toInt()}%", Modifier.weight(1f))
+                            if (trip.precipitationIn != null) StatItem("Rain/Snow", "${trip.precipitationIn} in", Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
             if (trip.notes.isNotBlank()) {
                 InsightCard(title = "Notes") {
                     Text(trip.notes, style = MaterialTheme.typography.bodyLarge)

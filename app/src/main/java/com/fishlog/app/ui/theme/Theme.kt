@@ -15,13 +15,15 @@ private val DarkColorScheme = darkColorScheme(
     primary = LakeBlue,
     secondary = DarkSteel,
     tertiary = Aqua,
-    background = Midnight,
-    surface = DeepOcean,
-    onPrimary = OffWhite,
-    onSecondary = OffWhite,
-    onTertiary = Midnight,
+    background = DeepOcean,
+    surface = NightBlue,
+    onPrimary = SurfaceWhite,
+    onSecondary = SurfaceWhite,
+    onTertiary = SurfaceWhite,
     onBackground = OffWhite,
-    onSurface = OffWhite
+    onSurface = OffWhite,
+    primaryContainer = DeepLakeBlue,
+    onPrimaryContainer = SurfaceWhite
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -35,7 +37,9 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = SurfaceWhite,
     onTertiary = SurfaceWhite,
     onBackground = DeepLakeBlue,
-    onSurface = DeepLakeBlue
+    onSurface = DeepLakeBlue,
+    primaryContainer = SkyBlue,
+    onPrimaryContainer = DeepLakeBlue
 )
 
 @Composable

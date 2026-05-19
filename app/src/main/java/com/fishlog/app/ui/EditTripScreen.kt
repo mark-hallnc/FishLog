@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.WeatherData
+import com.fishlog.app.location.LocationService
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +49,9 @@ fun EditTripScreen(
     val clarityOptions = listOf("Clear", "Stained", "Muddy", "Murky", "Other")
     val pressureOptions = listOf("Rising", "Falling", "Steady", "Unknown")
 
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val locationService = remember { LocationService(context) }
 
     Scaffold(
         topBar = {
@@ -168,18 +172,51 @@ fun EditTripScreen(
                             scope.launch {
                                 isWeatherLoading = true
                                 weatherMessage = "Fetching weather..."
-                                if (trip.latitude != null && trip.longitude != null) {
-                                    val result = viewModel.fetchWeather(trip.latitude, trip.longitude, trip.startTime)
+                                
+                                // Priority 1: Trip location
+                                var lat = trip.latitude
+                                var lon = trip.longitude
+                                
+                                // Priority 2: Current GPS if trip location missing
+                                if (lat == null || lon == null) {
+                                    val loc = locationService.getCurrentLocation()
+                                    lat = loc?.latitude
+                                    lon = loc?.longitude
+                                }
+
+                                if (lat != null && lon != null) {
+                                    val result = viewModel.fetchWeather(lat, lon)
                                     if (result.isSuccess) {
                                         val data = result.getOrNull()!!
                                         fetchedWeatherData = data
-                                        airTemp = data.airTempF?.toString() ?: airTemp
-                                        weatherMessage = "Weather auto-filled."
+                                        
+                                        // Overwrite manual fields
+                                        airTemp = data.airTempF?.let { "%.1f".format(it) } ?: airTemp
+                                        
+                                        val summary = data.weatherSummary
+                                        if (skyOptions.contains(summary)) {
+                                            skyCondition = summary
+                                        } else if (summary.contains("Cloudy")) {
+                                            skyCondition = "Cloudy"
+                                        } else if (summary.contains("Rain") || summary.contains("Showers")) {
+                                            skyCondition = "Rain"
+                                        } else if (summary.contains("Storm")) {
+                                            skyCondition = "Storms"
+                                        } else {
+                                            skyCondition = "Other"
+                                        }
+
+                                        val windDesc = viewModel.mapWindSpeedToCondition(data.windSpeedMph)
+                                        if (windOptions.contains(windDesc)) {
+                                            windCondition = windDesc
+                                        }
+
+                                        weatherMessage = "Weather auto-filled from Open-Meteo."
                                     } else {
-                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather unavailable."
+                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
                                     }
                                 } else {
-                                    weatherMessage = "Trip location not saved."
+                                    weatherMessage = "Trip location not saved. Enable GPS to use current location."
                                 }
                                 isWeatherLoading = false
                             }
@@ -189,14 +226,16 @@ fun EditTripScreen(
                         enabled = !isWeatherLoading
                     ) {
                         if (isWeatherLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Fetching...")
                         } else {
                             Text("Auto-fill Weather")
                         }
                     }
 
                     weatherMessage?.let {
-                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }

@@ -182,6 +182,22 @@ fun TripSummaryScreen(
                     )
                 }
             }
+
+            if (trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()) {
+                InsightCard(title = "Weather") {
+                    val weatherParts = listOfNotNull(
+                        trip.weatherSummary.ifBlank { null },
+                        trip.airTempF?.let { "${it.toInt()}°F" },
+                        trip.windSpeedMph?.let { "Wind ${it.toInt()} mph" },
+                        trip.cloudCoverPercent?.let { "$it% clouds" }
+                    )
+                    Text(
+                        text = weatherParts.joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
  else {
                 Text(
                     "Conditions not recorded.",
