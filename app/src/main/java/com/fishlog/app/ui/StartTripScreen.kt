@@ -232,7 +232,7 @@ fun StartTripScreen(
                                             windCondition = windDesc
                                         }
 
-                                        weatherMessage = "Weather auto-filled from Open-Meteo."
+                                        weatherMessage = "Weather filled."
                                     } else {
                                         weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
                                     }
@@ -260,7 +260,7 @@ fun StartTripScreen(
                     }
                     
                     Text(
-                        "Auto-fill uses your current location to fetch data from Open-Meteo.",
+                        "Auto-fill uses your current location to fetch current conditions.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )

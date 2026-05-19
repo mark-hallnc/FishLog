@@ -99,7 +99,7 @@ class WeatherRepository {
                 Log.e(TAG, "API error: $responseCode")
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
                 Log.e(TAG, "Error body: $errorBody")
-                Result.failure(Exception("Weather request failed with error code $responseCode."))
+                Result.failure(Exception("Weather is unavailable right now. You can enter conditions manually."))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching weather", e)

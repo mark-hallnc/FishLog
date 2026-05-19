@@ -293,7 +293,9 @@ fun TripDetailScreen(
             if (trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()) {
                 InsightCard(title = "Weather Details") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Source: ${trip.weatherSource.ifBlank { "Open-Meteo" }}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        if (trip.weatherAutoFilled) {
+                            Text("Auto-filled conditions", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        }
                         
                         if (trip.weatherSummary.isNotBlank()) {
                             Text(trip.weatherSummary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)

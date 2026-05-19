@@ -211,7 +211,7 @@ fun EditTripScreen(
                                             windCondition = windDesc
                                         }
 
-                                        weatherMessage = "Weather auto-filled from Open-Meteo."
+                                        weatherMessage = "Weather filled."
                                     } else {
                                         weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
                                     }
