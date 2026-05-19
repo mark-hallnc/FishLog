@@ -1,5 +1,8 @@
 package com.fishlog.app.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,13 +18,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fishlog.app.data.AccountStatus
-import com.fishlog.app.data.AppPreferences
-import com.fishlog.app.data.BackupUiState
+import com.fishlog.app.data.*
 import kotlinx.coroutines.launch
+import java.io.BufferedWriter
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,12 +36,102 @@ fun SettingsScreen(
     unitSystem: String,
     onAppearanceModeChange: (String) -> Unit,
     onUnitSystemChange: (String) -> Unit,
-    onBack: () -> Unit,
-    onBackupClick: () -> Unit,
-    onExportClick: () -> Unit
+    onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val catches by viewModel.allCatches.collectAsState()
+    val trips by viewModel.allTrips.collectAsState()
+    val pendingBackupCount = remember(catches) {
+        catches.count { it.backupStatus == BackupStatus.PENDING_BACKUP }
+    }
+
+    var statusMessage by remember { mutableStateOf<String?>(null) }
+    var isError by remember { mutableStateOf(false) }
+    var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
+
+    val csvExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val csvContent = CsvExportHelper.convertToCsv(catches, trips)
+                context.contentResolver.openOutputStream(uri)?.use { outputStream: OutputStream ->
+                    BufferedWriter(OutputStreamWriter(outputStream)).use { writer ->
+                        writer.write(csvContent)
+                    }
+                }
+                statusMessage = "CSV exported successfully!"
+                isError = false
+            } catch (e: Exception) {
+                statusMessage = "CSV export failed: ${e.message}"
+                isError = true
+            }
+        }
+    }
+
+    val jsonExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val jsonContent = JsonBackupHelper.createBackup(catches, trips)
+                context.contentResolver.openOutputStream(uri)?.use { outputStream: OutputStream ->
+                    BufferedWriter(OutputStreamWriter(outputStream)).use { writer ->
+                        writer.write(jsonContent)
+                    }
+                }
+                statusMessage = "Backup exported successfully!"
+                isError = false
+            } catch (e: Exception) {
+                statusMessage = "Backup export failed: ${e.message}"
+                isError = true
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            showImportConfirm = uri
+        }
+    }
+
+    if (showImportConfirm != null) {
+        AlertDialog(
+            onDismissRequest = { showImportConfirm = null },
+            title = { Text("Import Backup") },
+            text = { Text("Importing a backup will add records from the backup file to this device. Duplicates will be skipped.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val uri = showImportConfirm!!
+                    showImportConfirm = null
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            val jsonString = inputStream.bufferedReader().use { it.readText() }
+                            val backup = JsonBackupHelper.parseBackup(jsonString)
+                            viewModel.importBackup(backup)
+                            statusMessage = "Backup imported successfully!"
+                            isError = false
+                        }
+                    } catch (e: Exception) {
+                        statusMessage = "Import failed: ${e.message}"
+                        isError = true
+                    }
+                }) {
+                    Text("Import")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportConfirm = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     var showAppearanceDialog by remember { mutableStateOf(false) }
     var showUnitDialog by remember { mutableStateOf(false) }
@@ -185,29 +280,90 @@ fun SettingsScreen(
 
             // Data & Backup
             SettingsSection(title = "Data & Backup") {
-                SettingRow(
-                    icon = Icons.Default.CloudUpload,
-                    title = "Backup & Account (Local Files)",
-                    subtitle = "Manage local backups",
-                    onClick = onBackupClick
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                SettingRow(
-                    icon = Icons.Default.FileDownload,
-                    title = "Export / Import Data",
-                    subtitle = "CSV & JSON",
-                    onClick = onExportClick
-                )
-            }
-
-            // Account & Cloud Backup
-            SettingsSection(title = "Account & Cloud Backup") {
+                // 1. About Backups
                 Text(
-                    text = "FishLog works fully offline without an account. Sign in later to optionally back up your logs to the cloud and restore them on a new device.",
+                    text = "FishLog stores data locally on this device. You can export backups manually. Cloud backup is optional and coming later.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 2. Local Status
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Local Status", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Logs", style = MaterialTheme.typography.bodySmall)
+                            Text(catches.size.toString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Trips", style = MaterialTheme.typography.bodySmall)
+                            Text(trips.size.toString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Pending Cloud Backup", style = MaterialTheme.typography.bodySmall)
+                            Text(pendingBackupCount.toString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 3. CSV Export
+                Text("CSV Export", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("For spreadsheets and external analysis.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { csvExportLauncher.launch("fishlog-catches.csv") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Export Catch Logs CSV")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 4. Full Backup
+                Text("Full Backup", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("JSON backup for restoring or moving data.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { jsonExportLauncher.launch("fishlog-backup.json") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Export Full Backup", fontSize = 12.sp)
+                    }
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(arrayOf("application/json")) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Import Full Backup", fontSize = 12.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 5. Cloud Backup
+                Text("Cloud Backup (Optional)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("Sign in to sync your data to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
 
                 if (viewModel.accountStatus == AccountStatus.SIGNED_OUT) {
                     var email by remember { mutableStateOf("") }
@@ -235,7 +391,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                               viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
@@ -247,7 +403,7 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             enabled = isEmailValid && !isOperationInProgress
                         ) {
-                            Text("Create Account")
+                            Text("Create Account", fontSize = 12.sp)
                         }
                         OutlinedButton(
                             onClick = { viewModel.signIn(email) },
@@ -255,7 +411,7 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             enabled = isEmailValid && !isOperationInProgress
                         ) {
-                            Text("Sign In")
+                            Text("Sign In", fontSize = 12.sp)
                         }
                     }
                 } else {
@@ -270,7 +426,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                               viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
@@ -283,11 +439,11 @@ fun SettingsScreen(
                             enabled = !isOperationInProgress
                         ) {
                             if (viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Backing up...")
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Backing up...", fontSize = 12.sp)
                             } else {
-                                Text("Backup Now")
+                                Text("Backup Now", fontSize = 12.sp)
                             }
                         }
                         OutlinedButton(
@@ -297,11 +453,11 @@ fun SettingsScreen(
                             enabled = !isOperationInProgress
                         ) {
                             if (viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Restoring...")
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Restoring...", fontSize = 12.sp)
                             } else {
-                                Text("Restore")
+                                Text("Restore", fontSize = 12.sp)
                             }
                         }
                     }
@@ -342,7 +498,34 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                statusMessage?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { statusMessage = null }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
             }
+
+            // Developer Tools
 
             // Developer Tools
             SettingsSection(title = "Developer Tools") {

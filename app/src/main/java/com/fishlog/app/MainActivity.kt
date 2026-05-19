@@ -32,7 +32,6 @@ import com.fishlog.app.map.MapScreen
 import com.fishlog.app.ui.CatchFormScreen
 import com.fishlog.app.ui.NoCatchFormScreen
 import com.fishlog.app.ui.CatchListScreen
-import com.fishlog.app.ui.ExportScreen
 import com.fishlog.app.ui.CatchDetailScreen
 import com.fishlog.app.ui.InsightsScreen
 import com.fishlog.app.ui.StartTripScreen
@@ -41,7 +40,6 @@ import com.fishlog.app.ui.TripHistoryScreen
 import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.SettingsScreen
-import com.fishlog.app.ui.BackupScreen
 import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
@@ -152,8 +150,6 @@ fun MainScreen(
                     currentScreen = "Map" 
                 },
                 onInsightsClick = { currentScreen = "Insights" },
-                onBackupClick = { currentScreen = "Backup" },
-                onExportClick = { currentScreen = "Export" },
                 onTripHistoryClick = { currentScreen = "TripHistory" },
                 onSettingsClick = { currentScreen = "Settings" },
                 onStartTripClick = { currentScreen = "StartTrip" },
@@ -291,16 +287,6 @@ fun MainScreen(
                 unitSystem = unitSystem,
                 onBack = { currentScreen = "Home" }
             )
-            "Backup" -> BackupScreen(
-                viewModel = viewModel,
-                onBack = { currentScreen = "Home" },
-                onExportBackup = { currentScreen = "Export" },
-                onImportBackup = { currentScreen = "Export" }
-            )
-            "Export" -> ExportScreen(
-                viewModel = viewModel,
-                onBack = { currentScreen = "Home" }
-            )
             "TripHistory" -> TripHistoryScreen(
                 viewModel = viewModel,
                 onBack = { currentScreen = "Home" },
@@ -329,9 +315,7 @@ fun MainScreen(
                 unitSystem = unitSystem,
                 onAppearanceModeChange = onAppearanceModeChange,
                 onUnitSystemChange = onUnitSystemChange,
-                onBack = { currentScreen = "Home" },
-                onBackupClick = { currentScreen = "Backup" },
-                onExportClick = { currentScreen = "Export" }
+                onBack = { currentScreen = "Home" }
             )
         }
     }
@@ -345,8 +329,6 @@ fun HomeScreen(
     onHistoryClick: () -> Unit,
     onMapClick: () -> Unit,
     onInsightsClick: () -> Unit,
-    onBackupClick: () -> Unit,
-    onExportClick: () -> Unit,
     onTripHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onStartTripClick: () -> Unit,
@@ -388,6 +370,19 @@ fun HomeScreen(
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.05f))
             )
+
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 12.dp, y = (-12).dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
 
             Column(
                 modifier = Modifier.align(Alignment.BottomStart)
@@ -539,22 +534,6 @@ fun HomeScreen(
                     subtitle = "Analytics",
                     icon = Icons.Default.Analytics,
                     onClick = onInsightsClick
-                )
-            }
-            item {
-                HomeCard(
-                    title = "Data & Backup",
-                    subtitle = "Import, export, backup",
-                    icon = Icons.Default.Storage,
-                    onClick = onBackupClick
-                )
-            }
-            item {
-                HomeCard(
-                    title = "Settings",
-                    subtitle = "Preferences",
-                    icon = Icons.Default.Settings,
-                    onClick = onSettingsClick
                 )
             }
         }
