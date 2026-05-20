@@ -46,6 +46,9 @@ import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.ui.DateRangeFilter
+import com.fishlog.app.ui.LogTypeFilter
+import com.fishlog.app.ui.MapReturnState
 
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -125,6 +128,18 @@ fun MainScreen(
     var focusedLogOnMap by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
     var selectedPhotoUri by remember { mutableStateOf<String?>(null) }
+    var savedMapReturnState by remember { mutableStateOf<MapReturnState?>(null) }
+
+    // Map filters state to persist across detail views
+    var mapSelectedSpecies by remember { mutableStateOf("All Species") }
+    var mapSelectedBait by remember { mutableStateOf("All Baits") }
+    var mapSelectedTripId by remember { mutableStateOf<Long?>(null) }
+    var mapSelectedWaterBody by remember { mutableStateOf("All Water Bodies") }
+    var mapDateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
+    var mapLogTypeFilter by remember { mutableStateOf(LogTypeFilter.ALL) }
+    var mapShowFilters by remember { mutableStateOf(false) }
+    var mapSelectedLogForOverlay by remember { mutableStateOf<CatchLog?>(null) }
+
     val scope = rememberCoroutineScope()
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -147,6 +162,8 @@ fun MainScreen(
                 onMapClick = { 
                     previousScreen = "Home"
                     focusedLogOnMap = null
+                    savedMapReturnState = null
+                    mapSelectedLogForOverlay = null
                     currentScreen = "Map" 
                 },
                 onInsightsClick = { currentScreen = "Insights" },
@@ -177,6 +194,7 @@ fun MainScreen(
                     onBack = { currentScreen = previousTripScreen },
                     onLogClick = { catch ->
                         selectedCatch = catch
+                        previousScreen = "TripDetail"
                         currentScreen = "Detail"
                     },
                     onLogCatch = {
@@ -253,6 +271,8 @@ fun MainScreen(
                         selectedCatch = log
                         focusedLogOnMap = log
                         previousScreen = "Detail"
+                        savedMapReturnState = null
+                        mapSelectedLogForOverlay = log
                         currentScreen = "Map"
                     },
                     onPhotoClick = { uri ->
@@ -270,17 +290,40 @@ fun MainScreen(
             } ?: run { currentScreen = previousScreen }
             "Map" -> MapScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = previousScreen },
-                onLogClick = { catch ->
+                onBack = { 
+                    currentScreen = previousScreen
+                    savedMapReturnState = null 
+                },
+                onLogClick = { catch, returnState ->
                     selectedCatch = catch
+                    savedMapReturnState = returnState
                     previousScreen = "Map"
                     currentScreen = "Detail"
                 },
-                onTripClick = { trip ->
+                onTripClick = { trip, returnState ->
                     selectedTrip = trip
+                    savedMapReturnState = returnState
+                    previousTripScreen = "Map"
                     currentScreen = "TripDetail"
                 },
-                focusLog = focusedLogOnMap
+                focusLog = focusedLogOnMap,
+                initialReturnState = savedMapReturnState,
+                selectedSpecies = mapSelectedSpecies,
+                onSpeciesChange = { mapSelectedSpecies = it },
+                selectedBait = mapSelectedBait,
+                onBaitChange = { mapSelectedBait = it },
+                selectedTripId = mapSelectedTripId,
+                onTripIdChange = { mapSelectedTripId = it },
+                selectedWaterBody = mapSelectedWaterBody,
+                onWaterBodyChange = { mapSelectedWaterBody = it },
+                dateFilter = mapDateFilter,
+                onDateFilterChange = { mapDateFilter = it },
+                logTypeFilter = mapLogTypeFilter,
+                onLogTypeFilterChange = { mapLogTypeFilter = it },
+                showFilters = mapShowFilters,
+                onShowFiltersChange = { mapShowFilters = it },
+                selectedLogForOverlay = mapSelectedLogForOverlay,
+                onLogForOverlayChange = { mapSelectedLogForOverlay = it }
             )
             "Insights" -> InsightsScreen(
                 viewModel = viewModel,

@@ -25,6 +25,7 @@ import com.fishlog.app.ui.FishLogViewModel
 import com.fishlog.app.ui.LogTypeFilter
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.DateFilterControls
+import com.fishlog.app.ui.MapReturnState
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -39,25 +40,33 @@ import java.util.*
 fun MapScreen(
     viewModel: FishLogViewModel,
     onBack: () -> Unit,
-    onLogClick: (CatchLog) -> Unit,
-    onTripClick: (FishingTrip) -> Unit,
-    focusLog: CatchLog? = null
+    onLogClick: (CatchLog, MapReturnState) -> Unit,
+    onTripClick: (FishingTrip, MapReturnState) -> Unit,
+    focusLog: CatchLog? = null,
+    initialReturnState: MapReturnState? = null,
+    // Persistent filter state
+    selectedSpecies: String,
+    onSpeciesChange: (String) -> Unit,
+    selectedBait: String,
+    onBaitChange: (String) -> Unit,
+    selectedTripId: Long?,
+    onTripIdChange: (Long?) -> Unit,
+    selectedWaterBody: String,
+    onWaterBodyChange: (String) -> Unit,
+    dateFilter: DateRangeFilter,
+    onDateFilterChange: (DateRangeFilter) -> Unit,
+    logTypeFilter: LogTypeFilter,
+    onLogTypeFilterChange: (LogTypeFilter) -> Unit,
+    showFilters: Boolean,
+    onShowFiltersChange: (Boolean) -> Unit,
+    selectedLogForOverlay: CatchLog?,
+    onLogForOverlayChange: (CatchLog?) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val locationService = remember { LocationService(context) }
     val catches by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
-
-    var selectedSpecies by remember { mutableStateOf("All Species") }
-    var selectedBait by remember { mutableStateOf("All Baits") }
-    var selectedTripId by remember { mutableStateOf<Long?>(null) } // null = All, -1 = Standalone
-    var selectedWaterBody by remember { mutableStateOf("All Water Bodies") }
-    var dateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
-    var logTypeFilter by remember { mutableStateOf(LogTypeFilter.ALL) }
-    var showFilters by remember { mutableStateOf(false) }
-    
-    var selectedLogForOverlay by remember { mutableStateOf<CatchLog?>(focusLog) }
 
     val speciesList = remember(catches) {
         listOf("All Species") + catches.filter { it.logType == "CATCH" }.map { it.species }.distinct().sorted()
@@ -186,7 +195,11 @@ fun MapScreen(
 
     LaunchedEffect(Unit) {
         if (!initialCenterApplied) {
-            if (focusLog != null && focusLog.latitude != null && focusLog.longitude != null) {
+            if (initialReturnState != null) {
+                mapView.controller.setCenter(GeoPoint(initialReturnState.centerLat, initialReturnState.centerLon))
+                mapView.controller.setZoom(initialReturnState.zoom)
+                initialCenterApplied = true
+            } else if (focusLog != null && focusLog.latitude != null && focusLog.longitude != null) {
                 mapView.controller.setCenter(GeoPoint(focusLog.latitude, focusLog.longitude))
                 mapView.controller.setZoom(15.0)
                 initialCenterApplied = true
@@ -215,7 +228,7 @@ fun MapScreen(
                     IconButton(onClick = { centerOnUser() }) {
                         Icon(Icons.Default.MyLocation, contentDescription = "Center on Me")
                     }
-                    IconButton(onClick = { showFilters = !showFilters }) {
+                    IconButton(onClick = { onShowFiltersChange(!showFilters) }) {
                         Icon(
                             imageVector = if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
                             contentDescription = "Toggle Filters"
@@ -241,14 +254,14 @@ fun MapScreen(
                 MapFilterSection(
                     selectedSpecies = selectedSpecies,
                     speciesList = speciesList,
-                    onSpeciesSelected = { selectedSpecies = it },
+                    onSpeciesSelected = onSpeciesChange,
                     selectedBait = selectedBait,
                     baitList = baitList,
-                    onBaitSelected = { selectedBait = it },
+                    onBaitSelected = onBaitChange,
                     selectedTripLabel = selectedTripLabel,
                     tripOptions = tripOptions,
                     onTripSelected = { label ->
-                        selectedTripId = when (label) {
+                        val newId = when (label) {
                             "All Logs" -> null
                             "Not attached to trip" -> -1L
                             else -> {
@@ -256,23 +269,24 @@ fun MapScreen(
                                 trips.find { it.name == tripName }?.id
                             }
                         }
+                        onTripIdChange(newId)
                     },
                     selectedWaterBody = selectedWaterBody,
                     waterBodyList = waterBodyList,
-                    onWaterBodySelected = { selectedWaterBody = it },
+                    onWaterBodySelected = onWaterBodyChange,
                     dateFilter = dateFilter,
-                    onDateFilterChange = { dateFilter = it },
+                    onDateFilterChange = onDateFilterChange,
                     availableMonths = availableMonths,
                     availableYears = availableYears,
                     logTypeFilter = logTypeFilter,
-                    onLogTypeFilterSelected = { logTypeFilter = it },
+                    onLogTypeFilterSelected = onLogTypeFilterChange,
                     onClearFilters = {
-                        selectedSpecies = "All Species"
-                        selectedBait = "All Baits"
-                        selectedTripId = null
-                        selectedWaterBody = "All Water Bodies"
-                        dateFilter = DateRangeFilter.AllDates
-                        logTypeFilter = LogTypeFilter.ALL
+                        onSpeciesChange("All Species")
+                        onBaitChange("All Baits")
+                        onTripIdChange(null)
+                        onWaterBodyChange("All Water Bodies")
+                        onDateFilterChange(DateRangeFilter.AllDates)
+                        onLogTypeFilterChange(LogTypeFilter.ALL)
                     },
                     modifier = Modifier.zIndex(2f)
                 )
@@ -320,7 +334,7 @@ fun MapScreen(
                             }
                             
                             marker.setOnMarkerClickListener { _, _ ->
-                                selectedLogForOverlay = log
+                                onLogForOverlayChange(log)
                                 // Also animate to marker to make it clear what was selected
                                 mapView.controller.animateTo(marker.position)
                                 true
@@ -363,7 +377,7 @@ fun MapScreen(
                                         color = MaterialTheme.colorScheme.secondary
                                     )
                                 }
-                                IconButton(onClick = { selectedLogForOverlay = null }) {
+                                IconButton(onClick = { onLogForOverlayChange(null) }) {
                                     Icon(Icons.Default.Close, contentDescription = "Close")
                                 }
                             }
@@ -383,7 +397,11 @@ fun MapScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Button(
-                                    onClick = { onLogClick(log) },
+                                    onClick = { 
+                                        val center = mapView.mapCenter
+                                        val zoom = mapView.zoomLevelDouble
+                                        onLogClick(log, MapReturnState(center.latitude, center.longitude, zoom, true)) 
+                                    },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -391,7 +409,11 @@ fun MapScreen(
                                 }
                                 if (trip != null) {
                                     OutlinedButton(
-                                        onClick = { onTripClick(trip) },
+                                        onClick = { 
+                                            val center = mapView.mapCenter
+                                            val zoom = mapView.zoomLevelDouble
+                                            onTripClick(trip, MapReturnState(center.latitude, center.longitude, zoom, true))
+                                        },
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
