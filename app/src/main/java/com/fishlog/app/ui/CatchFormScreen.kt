@@ -10,16 +10,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
@@ -98,6 +102,7 @@ fun CatchFormScreen(
     var bait by remember { mutableStateOf(editingCatch?.bait ?: "") }
     var notes by remember { mutableStateOf(editingCatch?.notes ?: "") }
     var photoUri by remember { mutableStateOf(editingCatch?.photoUri) }
+    var quantity by remember { mutableStateOf("1") }
     
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -217,11 +222,16 @@ fun CatchFormScreen(
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(16.dp))
+                        val qInt = quantity.toIntOrNull() ?: 1
+                        val successText = if (editingCatch != null) "Catch updated successfully!"
+                            else if (qInt > 1) "$qInt catches saved successfully!"
+                            else "Catch saved successfully!"
                         Text(
-                            text = "Catch saved successfully!",
+                            text = successText,
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         if (editingCatch == null) {
@@ -497,12 +507,71 @@ fun CatchFormScreen(
                         }
                     }
                 }
+
+                // Quantity / Run Feature (New catches only)
+                if (editingCatch == null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Had a good run?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "If you caught several similar fish, enter how many. FishLog will create one log for each fish.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = quantity,
+                                    onValueChange = { if (it.length <= 2) quantity = it.filter { c -> c.isDigit() } },
+                                    label = { Text("Number of fish") },
+                                    modifier = Modifier.width(120.dp),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+                                
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { 
+                                            val current = quantity.toIntOrNull() ?: 1
+                                            if (current > 1) quantity = (current - 1).toString()
+                                        },
+                                        modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape).border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(16.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    IconButton(
+                                        onClick = { 
+                                            val current = quantity.toIntOrNull() ?: 1
+                                            if (current < 99) quantity = (current + 1).toString()
+                                        },
+                                        modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape).border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 
                 Button(
                     onClick = {
                         if (isSaving) return@Button
+                        
+                        val qInt = quantity.toIntOrNull() ?: 1
                         if (species.isBlank()) {
                             errorMessage = "Species is required"
+                        } else if (qInt < 1 || qInt > 99) {
+                            errorMessage = "Enter a number from 1 to 99"
                         } else {
                             errorMessage = null
                             isSaving = true
@@ -545,22 +614,42 @@ fun CatchFormScreen(
                                         )
                                         viewModel.updateCatch(updatedCatch)
                                     } else {
-                                        viewModel.saveCatch(
-                                            species = species,
-                                            length = length,
-                                            weight = weight,
-                                            waterTemp = waterTemp,
-                                            depth = depth,
-                                            bait = bait,
-                                            notes = notes,
-                                            latitude = lat,
-                                            longitude = lon,
-                                            lengthInches = length.toDoubleOrNull(),
-                                            weightLbs = weight.toDoubleOrNull(),
-                                            waterTempF = waterTemp.toDoubleOrNull(),
-                                            depthFeet = depth.toDoubleOrNull(),
-                                            photoUri = photoUri
-                                        )
+                                        if (qInt > 1) {
+                                            viewModel.saveCatchRun(
+                                                species = species,
+                                                length = length,
+                                                weight = weight,
+                                                waterTemp = waterTemp,
+                                                depth = depth,
+                                                bait = bait,
+                                                notes = notes,
+                                                latitude = lat,
+                                                longitude = lon,
+                                                lengthInches = length.toDoubleOrNull(),
+                                                weightLbs = weight.toDoubleOrNull(),
+                                                waterTempF = waterTemp.toDoubleOrNull(),
+                                                depthFeet = depth.toDoubleOrNull(),
+                                                photoUri = photoUri,
+                                                quantity = qInt
+                                            )
+                                        } else {
+                                            viewModel.saveCatch(
+                                                species = species,
+                                                length = length,
+                                                weight = weight,
+                                                waterTemp = waterTemp,
+                                                depth = depth,
+                                                bait = bait,
+                                                notes = notes,
+                                                latitude = lat,
+                                                longitude = lon,
+                                                lengthInches = length.toDoubleOrNull(),
+                                                weightLbs = weight.toDoubleOrNull(),
+                                                waterTempF = waterTemp.toDoubleOrNull(),
+                                                depthFeet = depth.toDoubleOrNull(),
+                                                photoUri = photoUri
+                                            )
+                                        }
                                     }
                                     showConfirmation = true
                                 } catch (e: Exception) {
@@ -586,8 +675,12 @@ fun CatchFormScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text("Saving...", style = MaterialTheme.typography.titleMedium)
                     } else {
+                        val qInt = quantity.toIntOrNull() ?: 1
+                        val buttonText = if (editingCatch != null) "Update Catch" 
+                            else if (qInt > 1) "Save $qInt Catches"
+                            else "Save Catch"
                         Text(
-                            if (editingCatch != null) "Update Catch" else "Save Catch",
+                            buttonText,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }

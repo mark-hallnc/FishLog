@@ -315,6 +315,57 @@ class FishLogViewModel(
         }
     }
 
+    fun saveCatchRun(
+        species: String,
+        length: String,
+        weight: String,
+        waterTemp: String,
+        depth: String,
+        bait: String,
+        notes: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        lengthInches: Double? = null,
+        weightLbs: Double? = null,
+        waterTempF: Double? = null,
+        depthFeet: Double? = null,
+        photoUri: String? = null,
+        quantity: Int
+    ) {
+        viewModelScope.launch {
+            val currentActiveTrip = activeTrip.value
+            val baseTime = System.currentTimeMillis()
+            val logs = mutableListOf<CatchLog>()
+
+            for (i in 0 until quantity) {
+                val runNote = "Logged as part of a $quantity-fish run."
+                val combinedNotes = if (notes.isBlank()) runNote else "$notes\n$runNote"
+                
+                logs.add(CatchLog(
+                    species = species,
+                    length = length,
+                    weight = weight,
+                    waterTemp = waterTemp,
+                    depth = depth,
+                    lengthInches = lengthInches,
+                    weightLbs = weightLbs,
+                    waterTempF = waterTempF,
+                    depthFeet = depthFeet,
+                    tripId = currentActiveTrip?.id,
+                    // Attach photo only to the first catch in the run
+                    photoUri = if (i == 0) photoUri else null,
+                    bait = bait,
+                    notes = combinedNotes,
+                    latitude = latitude,
+                    longitude = longitude,
+                    // Offset timestamps by 1 second each
+                    timestamp = baseTime + (i * 1000L)
+                ))
+            }
+            catchLogDao.insertAll(logs)
+        }
+    }
+
     fun saveNoCatch(
         waterTemp: String,
         depth: String,

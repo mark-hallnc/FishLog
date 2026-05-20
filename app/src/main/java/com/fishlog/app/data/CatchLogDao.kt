@@ -12,6 +12,9 @@ interface CatchLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCatch(catchLog: CatchLog)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(catches: List<CatchLog>)
+
     @androidx.room.Update
     suspend fun updateCatch(catchLog: CatchLog)
 
