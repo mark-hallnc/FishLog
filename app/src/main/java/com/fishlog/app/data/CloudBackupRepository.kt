@@ -38,51 +38,35 @@ class CloudBackupRepository(context: Context) {
     }
 
     /**
-     * Sends an OTP code to the email. If the user does not exist, they will be created.
-     * Note: Supabase will send the "Magic link" template if "Confirm Email" is OFF in dashboard.
-     * If "Confirm Email" is ON, new signups will receive the "Confirm Signup" template link instead.
+     * Sends a one-time sign-in code to the provided email address.
+     * If the user doesn't exist, an account will be created automatically.
+     * 
+     * IMPORTANT: For code-entry flow, the Supabase "Magic link or OTP" email template 
+     * should include {{ .Token }}. Instruct users to enter the code in FishLog.
      */
-    suspend fun createAccount(email: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun sendSignInCode(email: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!SupabaseClientProvider.isConfigured()) {
                 return@withContext Result.failure(Exception("Supabase is not configured."))
             }
             
-            Log.d(TAG, "Sending OTP for account creation: $email")
-            // signInWith(OTP) is the passwordless flow in Supabase Kotlin SDK v3
+            Log.d(TAG, "Requesting OTP code for: $email")
+            // signInWith(OTP) is the universal passwordless flow in Supabase Kotlin SDK v3
             SupabaseClientProvider.client.auth.signInWith(OTP) {
                 this.email = email
-                this.createUser = true
+                this.createUser = true // Always allow creation to simplify the flow
             }
             
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error in createAccount", e)
+            Log.e(TAG, "Error in sendSignInCode", e)
             Result.failure(Exception("Could not send code. Check your email address and connection."))
         }
     }
 
-    /**
-     * Sends an OTP code to an existing user's email.
-     */
-    suspend fun signIn(email: String): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            if (!SupabaseClientProvider.isConfigured()) {
-                return@withContext Result.failure(Exception("Supabase is not configured."))
-            }
-
-            Log.d(TAG, "Sending OTP for sign in: $email")
-            SupabaseClientProvider.client.auth.signInWith(OTP) {
-                this.email = email
-                this.createUser = false 
-            }
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in signIn", e)
-            Result.failure(Exception("Could not send code. Use Create Account if you don't have one yet."))
-        }
-    }
+    /** wrappers for compatibility if needed elsewhere */
+    suspend fun createAccount(email: String): Result<Unit> = sendSignInCode(email)
+    suspend fun signIn(email: String): Result<Unit> = sendSignInCode(email)
 
     /**
      * Verifies the OTP code sent via email. Handles both signup and magiclink flows.

@@ -369,6 +369,13 @@ fun SettingsScreen(
                     var email by remember { mutableStateOf("") }
                     val isEmailValid = email.contains("@") && email.isNotBlank()
 
+                    Text(
+                        text = "Enter your email and FishLog will send a one-time code. If you do not have an account yet, one will be created.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -391,28 +398,22 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS || 
                                               viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                               viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { viewModel.createAccount(email) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = isEmailValid && !isOperationInProgress
-                        ) {
-                            Text("Create Account", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = { viewModel.signIn(email) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = isEmailValid && !isOperationInProgress
-                        ) {
-                            Text("Sign In", fontSize = 12.sp)
+                    Button(
+                        onClick = { viewModel.sendSignInCode(email) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = isEmailValid && !isOperationInProgress
+                    ) {
+                        if (isOperationInProgress) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Email Me a Sign-In Code")
                         }
                     }
                 } else if (viewModel.accountStatus == AccountStatus.WAITING_FOR_CODE) {

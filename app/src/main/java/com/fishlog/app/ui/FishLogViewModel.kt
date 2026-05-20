@@ -56,10 +56,10 @@ class FishLogViewModel(
             initialValue = null
         )
 
-    fun createAccount(email: String) {
+    fun sendSignInCode(email: String) {
         viewModelScope.launch {
             backupUiState = BackupUiState.AUTH_IN_PROGRESS
-            val result = cloudBackupRepository.createAccount(email)
+            val result = cloudBackupRepository.sendSignInCode(email)
             if (result.isSuccess) {
                 pendingAuthEmail = email
                 accountStatus = AccountStatus.WAITING_FOR_CODE
@@ -72,21 +72,8 @@ class FishLogViewModel(
         }
     }
 
-    fun signIn(email: String) {
-        viewModelScope.launch {
-            backupUiState = BackupUiState.AUTH_IN_PROGRESS
-            val result = cloudBackupRepository.signIn(email)
-            if (result.isSuccess) {
-                pendingAuthEmail = email
-                accountStatus = AccountStatus.WAITING_FOR_CODE
-                backupUiState = BackupUiState.WAITING_FOR_CODE
-                backupStatusMessage = "Check your email for the sign-in code."
-            } else {
-                backupUiState = BackupUiState.ERROR
-                backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not send code."
-            }
-        }
-    }
+    fun createAccount(email: String) = sendSignInCode(email)
+    fun signIn(email: String) = sendSignInCode(email)
 
     fun verifyEmailCode(code: String) {
         val email = pendingAuthEmail ?: return
