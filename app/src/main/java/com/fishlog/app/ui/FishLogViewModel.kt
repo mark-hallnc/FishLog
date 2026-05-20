@@ -32,6 +32,9 @@ class FishLogViewModel(
     var backupStatusMessage by mutableStateOf<String?>(null)
         private set
 
+    var pendingAuthEmail by mutableStateOf<String?>(null)
+        private set
+
     val allCatches: StateFlow<List<CatchLog>> = catchLogDao.getAllCatches()
         .stateIn(
             scope = viewModelScope,
@@ -55,34 +58,63 @@ class FishLogViewModel(
 
     fun createAccount(email: String) {
         viewModelScope.launch {
-            backupUiState = BackupUiState.BACKUP_IN_PROGRESS
+            backupUiState = BackupUiState.AUTH_IN_PROGRESS
             val result = cloudBackupRepository.createAccount(email)
             if (result.isSuccess) {
-                accountStatus = AccountStatus.SIGNED_IN
-                accountEmail = email
-                backupUiState = BackupUiState.SUCCESS
-                backupStatusMessage = "Account created successfully (Placeholder)"
+                pendingAuthEmail = email
+                accountStatus = AccountStatus.WAITING_FOR_CODE
+                backupUiState = BackupUiState.WAITING_FOR_CODE
+                backupStatusMessage = "Check your email for the sign-in code."
             } else {
                 backupUiState = BackupUiState.ERROR
-                backupStatusMessage = "Failed to create account"
+                backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not send code."
             }
         }
     }
 
     fun signIn(email: String) {
         viewModelScope.launch {
-            backupUiState = BackupUiState.BACKUP_IN_PROGRESS
+            backupUiState = BackupUiState.AUTH_IN_PROGRESS
             val result = cloudBackupRepository.signIn(email)
             if (result.isSuccess) {
-                accountStatus = AccountStatus.SIGNED_IN
-                accountEmail = email
-                backupUiState = BackupUiState.SUCCESS
-                backupStatusMessage = "Signed in successfully (Placeholder)"
+                pendingAuthEmail = email
+                accountStatus = AccountStatus.WAITING_FOR_CODE
+                backupUiState = BackupUiState.WAITING_FOR_CODE
+                backupStatusMessage = "Check your email for the sign-in code."
             } else {
                 backupUiState = BackupUiState.ERROR
-                backupStatusMessage = "Failed to sign in"
+                backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not send code."
             }
         }
+    }
+
+    fun verifyEmailCode(code: String) {
+        val email = pendingAuthEmail ?: return
+        viewModelScope.launch {
+            backupUiState = BackupUiState.AUTH_IN_PROGRESS
+            val result = cloudBackupRepository.verifyEmailOtp(email, code)
+            if (result.isSuccess) {
+                accountStatus = AccountStatus.SIGNED_IN
+                accountEmail = cloudBackupRepository.getCurrentAccountEmail()
+                pendingAuthEmail = null
+                backupUiState = BackupUiState.SUCCESS
+                backupStatusMessage = "Code verified. You're signed in."
+            } else {
+                backupUiState = BackupUiState.ERROR
+                backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not verify code. Try again."
+            }
+        }
+    }
+
+    fun resendCode() {
+        pendingAuthEmail?.let { signIn(it) }
+    }
+
+    fun changeEmail() {
+        pendingAuthEmail = null
+        accountStatus = AccountStatus.SIGNED_OUT
+        backupUiState = BackupUiState.IDLE
+        backupStatusMessage = null
     }
 
     fun signOut() {

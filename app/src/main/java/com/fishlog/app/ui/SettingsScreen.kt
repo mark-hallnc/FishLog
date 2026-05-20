@@ -393,7 +393,8 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
+                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS || 
+                                              viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                               viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -414,6 +415,62 @@ fun SettingsScreen(
                             Text("Sign In", fontSize = 12.sp)
                         }
                     }
+                } else if (viewModel.accountStatus == AccountStatus.WAITING_FOR_CODE) {
+                    var code by remember { mutableStateOf("") }
+                    val isCodeValid = code.length >= 6
+
+                    Text(
+                        text = "Check your email for a sign-in code.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Verifying: ${viewModel.pendingAuthEmail}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it },
+                        label = { Text("6-digit Code") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS
+
+                    Button(
+                        onClick = { viewModel.verifyEmailCode(code) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = isCodeValid && !isOperationInProgress
+                    ) {
+                        if (isOperationInProgress) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Verify Code")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { viewModel.resendCode() }, enabled = !isOperationInProgress) {
+                            Text("Resend Code")
+                        }
+                        TextButton(onClick = { viewModel.changeEmail() }, enabled = !isOperationInProgress) {
+                            Text("Change Email")
+                        }
+                    }
                 } else {
                     Text(
                         text = "Signed in as:",
@@ -426,7 +483,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                               viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
