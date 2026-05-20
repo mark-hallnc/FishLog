@@ -326,11 +326,11 @@ fun MapScreen(
                                 "Date: $dateStr\nBait: ${log.bait}\nSize: ${log.lengthInches ?: log.length} in, ${log.weightLbs ?: log.weight} lbs$tripLine"
                             }
                             
-                            // Visual distinction for no-catch
+                            // Custom icons for catch and no-catch
                             if (isNoCatch) {
-                                marker.icon = context.getDrawable(org.osmdroid.library.R.drawable.marker_default_focused_base)
+                                marker.icon = context.getDrawable(com.fishlog.app.R.drawable.ic_map_marker_no_catch)
                             } else {
-                                marker.icon = context.getDrawable(org.osmdroid.library.R.drawable.marker_default)
+                                marker.icon = context.getDrawable(com.fishlog.app.R.drawable.ic_map_marker_catch)
                             }
                             
                             marker.setOnMarkerClickListener { _, _ ->
