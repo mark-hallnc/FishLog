@@ -583,8 +583,6 @@ fun SettingsScreen(
             }
 
             // Developer Tools
-
-            // Developer Tools
             SettingsSection(title = "Developer Tools") {
                 Text(
                     text = "For testing only. Adds sample trips, catches, and no-catch logs.",

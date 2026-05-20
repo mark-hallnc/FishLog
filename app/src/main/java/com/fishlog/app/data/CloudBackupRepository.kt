@@ -37,6 +37,11 @@ class CloudBackupRepository(context: Context) {
         }
     }
 
+    /**
+     * Sends an OTP code to the email. If the user does not exist, they will be created.
+     * Note: Supabase will send the "Magic link" template if "Confirm Email" is OFF in dashboard.
+     * If "Confirm Email" is ON, new signups will receive the "Confirm Signup" template link instead.
+     */
     suspend fun createAccount(email: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!SupabaseClientProvider.isConfigured()) {
@@ -44,9 +49,10 @@ class CloudBackupRepository(context: Context) {
             }
             
             Log.d(TAG, "Sending OTP for account creation: $email")
+            // signInWith(OTP) is the passwordless flow in Supabase Kotlin SDK v3
             SupabaseClientProvider.client.auth.signInWith(OTP) {
                 this.email = email
-                createUser = true
+                this.createUser = true
             }
             
             Result.success(Unit)
@@ -56,6 +62,9 @@ class CloudBackupRepository(context: Context) {
         }
     }
 
+    /**
+     * Sends an OTP code to an existing user's email.
+     */
     suspend fun signIn(email: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!SupabaseClientProvider.isConfigured()) {
@@ -65,16 +74,19 @@ class CloudBackupRepository(context: Context) {
             Log.d(TAG, "Sending OTP for sign in: $email")
             SupabaseClientProvider.client.auth.signInWith(OTP) {
                 this.email = email
-                createUser = true
+                this.createUser = false 
             }
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error in signIn", e)
-            Result.failure(Exception("Could not send code. Check your email address and connection."))
+            Result.failure(Exception("Could not send code. Use Create Account if you don't have one yet."))
         }
     }
 
+    /**
+     * Verifies the OTP code sent via email. Handles both signup and magiclink flows.
+     */
     suspend fun verifyEmailOtp(email: String, code: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!SupabaseClientProvider.isConfigured()) {
@@ -82,13 +94,42 @@ class CloudBackupRepository(context: Context) {
             }
 
             Log.d(TAG, "Verifying OTP for $email with code $code")
-            // TODO: Fix unresolved verifyOtp call for Supabase Kotlin 3.1.x
-            // SupabaseClientProvider.client.auth.verifyOtp(type = OtpType.Email, email = email, token = code)
             
-            // For now, return success to test UI scaffolding
-            prefs.edit().putString(KEY_ACCOUNT_EMAIL, email).apply()
+            // Try verifying as Magic Link first (login)
+            val result = try {
+                SupabaseClientProvider.client.auth.verifyEmailOtp(
+                    type = OtpType.Email.MAGIC_LINK,
+                    email = email,
+                    token = code
+                )
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Log.d(TAG, "MagicLink verification failed, trying Signup type")
+                try {
+                    // Try as Signup confirmation (new user)
+                    SupabaseClientProvider.client.auth.verifyEmailOtp(
+                        type = OtpType.Email.SIGNUP,
+                        email = email,
+                        token = code
+                    )
+                    Result.success(Unit)
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Both verification types failed", e2)
+                    Result.failure(e2)
+                }
+            }
             
-            Result.success(Unit)
+            if (result.isSuccess) {
+                val user = SupabaseClientProvider.client.auth.currentUserOrNull()
+                if (user?.email != null) {
+                    prefs.edit().putString(KEY_ACCOUNT_EMAIL, user.email).apply()
+                } else {
+                    prefs.edit().putString(KEY_ACCOUNT_EMAIL, email).apply()
+                }
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Could not verify code. Check the code and try again."))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error in verifyEmailOtp", e)
             Result.failure(Exception("Could not verify code. Try again."))
