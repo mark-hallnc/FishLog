@@ -176,10 +176,21 @@ fun TripSummaryScreen(
 
             if (trip.moonPhaseName.isNotBlank()) {
                 InsightCard(title = "Moon") {
-                    Text(
-                        text = "${trip.moonPhaseName} · ${trip.moonIlluminationPercent?.toInt() ?: 0}% illuminated",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MoonPhaseIcon(
+                            illuminationPercent = trip.moonIlluminationPercent,
+                            waxing = trip.moonWaxing,
+                            phaseName = trip.moonPhaseName,
+                            size = 32.dp
+                        )
+                        Text(
+                            text = "${trip.moonPhaseName} · ${trip.moonIlluminationPercent?.toInt() ?: 0}% illuminated",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
 
