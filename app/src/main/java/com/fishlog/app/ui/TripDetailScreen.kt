@@ -163,20 +163,22 @@ fun TripDetailScreen(
 
             if (isActive && forecast != null) {
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Today",
+                            text = "Today's Forecast",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                         
                         Text(
@@ -191,8 +193,10 @@ fun TripDetailScreen(
                                     if (dir.isNotBlank()) append(" $dir")
                                 }
                             },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
