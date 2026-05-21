@@ -15,33 +15,7 @@ object PatternEngine {
         val tripById = trips.associateBy { it.id }
         
         // 1. Filter the base log set
-        val filteredLogs = logs.filter { log ->
-            // Date Filter
-            if (!filters.dateRange.matches(log.timestamp)) return@filter false
-
-            // Water Body Filter
-            if (filters.waterBody != null && filters.waterBody != "All Water Bodies") {
-                val trip = tripById[log.tripId]
-                val wb = trip?.waterBody?.trim()
-                if (wb?.equals(filters.waterBody, ignoreCase = true) != true) return@filter false
-            }
-
-            // Species Filter
-            if (filters.species != null && filters.species != "All Species") {
-                // If it's a catch, must match species
-                if (log.logType == "CATCH") {
-                    if (!log.species.equals(filters.species, ignoreCase = true)) return@filter false
-                }
-                // If it's a no-catch, we include it if it's "general" (blank species) 
-                // because it represents a trip/observation where the target might have been that species.
-                // This preserves catch rate context.
-                else if (log.logType == "NO_CATCH") {
-                    if (log.species.isNotBlank() && !log.species.equals(filters.species, ignoreCase = true)) return@filter false
-                }
-            }
-
-            true
-        }
+        val filteredLogs = filterLogs(logs, trips, filters)
 
         val catchLogs = filteredLogs.filter { it.logType == "CATCH" }
         val noCatchLogs = filteredLogs.filter { it.logType == "NO_CATCH" }
@@ -172,13 +146,6 @@ object PatternEngine {
         val total = catches + noCatches
         val rate = if (total > 0) catches.toDouble() / total.toDouble() else 0.0
         
-        val confidence = when {
-            total < 3 -> "Very early"
-            total <= 5 -> "Early pattern"
-            total <= 10 -> "Developing pattern"
-            else -> "Stronger pattern"
-        }
-
         return PatternInsight(
             title = title,
             subtitle = subtitle,
@@ -187,9 +154,47 @@ object PatternEngine {
             noCatchCount = noCatches,
             observationCount = total,
             catchRate = rate,
-            confidenceLabel = confidence,
+            confidenceLabel = calculateConfidence(total),
             matchingLogIds = group.map { it.id },
             patternType = type
         )
+    }
+
+    fun calculateConfidence(totalObservations: Int): String {
+        return when {
+            totalObservations < 3 -> "Very early"
+            totalObservations <= 5 -> "Early pattern"
+            totalObservations <= 10 -> "Developing pattern"
+            else -> "Stronger pattern"
+        }
+    }
+
+    fun filterLogs(
+        logs: List<CatchLog>,
+        trips: List<FishingTrip>,
+        filters: PatternEngineFilters
+    ): List<CatchLog> {
+        val tripById = trips.associateBy { it.id }
+        return logs.filter { log ->
+            // Date Filter
+            if (!filters.dateRange.matches(log.timestamp)) return@filter false
+
+            // Water Body Filter
+            if (filters.waterBody != null && filters.waterBody != "All Water Bodies") {
+                val trip = tripById[log.tripId]
+                val wb = trip?.waterBody?.trim()
+                if (wb?.equals(filters.waterBody, ignoreCase = true) != true) return@filter false
+            }
+
+            // Species Filter
+            if (filters.species != null && filters.species != "All Species") {
+                if (log.logType == "CATCH") {
+                    if (!log.species.equals(filters.species, ignoreCase = true)) return@filter false
+                } else if (log.logType == "NO_CATCH") {
+                    if (log.species.isNotBlank() && !log.species.equals(filters.species, ignoreCase = true)) return@filter false
+                }
+            }
+            true
+        }
     }
 }

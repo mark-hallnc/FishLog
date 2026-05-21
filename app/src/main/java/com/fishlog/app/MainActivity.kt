@@ -47,6 +47,7 @@ import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.SettingsScreen
 import com.fishlog.app.ui.AdvancedAnalyticsScreen
+import com.fishlog.app.ui.AdvancedReportsScreen
 import com.fishlog.app.ui.PatternDetailScreen
 import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
@@ -55,6 +56,9 @@ import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.analytics.PatternInsight
+import com.fishlog.app.analytics.PatternEngineFilters
+import com.fishlog.app.analytics.PatternType
+import com.fishlog.app.analytics.PatternEngine
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.LogTypeFilter
 import com.fishlog.app.ui.MapReturnState
@@ -172,6 +176,7 @@ fun MainScreen(
     var selectedPhotoUri by remember { mutableStateOf<String?>(null) }
     var savedMapReturnState by remember { mutableStateOf<MapReturnState?>(null) }
     var selectedPatternInsight by remember { mutableStateOf<PatternInsight?>(null) }
+    var selectedReportFilters by remember { mutableStateOf(PatternEngineFilters()) }
 
     // Map filters state to persist across detail views
     var mapSelectedSpecies by remember { mutableStateOf("All Species") }
@@ -396,8 +401,38 @@ fun MainScreen(
                     selectedPatternInsight = insight
                     previousScreen = "AdvancedAnalytics"
                     currentScreen = "PatternDetail"
+                },
+                onViewReports = { filters ->
+                    selectedReportFilters = filters
+                    currentScreen = "AdvancedReports"
                 }
             )
+            "AdvancedReports" -> {
+                val catches by viewModel.allCatches.collectAsState()
+                val trips by viewModel.allTrips.collectAsState()
+                AdvancedReportsScreen(
+                    logs = catches,
+                    trips = trips,
+                    filters = selectedReportFilters,
+                    onBack = { currentScreen = "AdvancedAnalytics" },
+                    onBucketClick = { bucket, category ->
+                        selectedPatternInsight = PatternInsight(
+                            title = bucket.label,
+                            subtitle = category,
+                            category = category,
+                            catchCount = bucket.catchCount,
+                            noCatchCount = bucket.noCatchCount,
+                            observationCount = bucket.observationCount,
+                            catchRate = bucket.catchRate,
+                            confidenceLabel = PatternEngine.calculateConfidence(bucket.observationCount),
+                            matchingLogIds = bucket.matchingLogIds,
+                            patternType = PatternType.TOP_PATTERN
+                        )
+                        previousScreen = "AdvancedReports"
+                        currentScreen = "PatternDetail"
+                    }
+                )
+            }
             "PatternDetail" -> selectedPatternInsight?.let { insight ->
                 val catches by viewModel.allCatches.collectAsState()
                 val trips by viewModel.allTrips.collectAsState()

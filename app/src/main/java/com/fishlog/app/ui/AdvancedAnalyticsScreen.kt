@@ -32,7 +32,8 @@ import java.util.*
 fun AdvancedAnalyticsScreen(
     viewModel: FishLogViewModel,
     onBack: () -> Unit,
-    onInsightClick: (PatternInsight) -> Unit
+    onInsightClick: (PatternInsight) -> Unit,
+    onViewReports: (PatternEngineFilters) -> Unit
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
@@ -135,6 +136,13 @@ fun AdvancedAnalyticsScreen(
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
             )
 
+            AnalyticsActionCard(
+                title = "Advanced Reports",
+                description = "Visual charts for catch rate by bait, depth, temperature, time, month, and moon.",
+                icon = Icons.Default.Assessment,
+                onClick = { onViewReports(filters) }
+            )
+
             AnalyticsPlaceholderCard(
                 title = "AI Trip Review",
                 description = "Generate plain-English summaries of what worked and what did not.",
@@ -145,12 +153,6 @@ fun AdvancedAnalyticsScreen(
                 title = "Predictive Suggestions",
                 description = "Use your history to suggest likely productive conditions and locations.",
                 icon = Icons.Default.Lightbulb
-            )
-
-            AnalyticsPlaceholderCard(
-                title = "Advanced Reports",
-                description = "Compare seasons, lakes, baits, and catch rates over time.",
-                icon = Icons.Default.Assessment
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -454,6 +456,56 @@ fun SmallStat(label: String, value: String) {
     Column {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun AnalyticsActionCard(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "View Reports",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
     }
 }
 
