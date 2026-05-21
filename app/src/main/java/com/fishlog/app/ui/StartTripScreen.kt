@@ -129,26 +129,6 @@ fun StartTripScreen(
                         existingWaterBodies = existingWaterBodies,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Notes") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Conditions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                    
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         DropdownFilter(
                             label = "Sky",
@@ -177,20 +157,28 @@ fun StartTripScreen(
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                         )
                         DropdownFilter(
-                            label = "Clarity",
-                            selectedOption = waterClarity.ifBlank { "Select Clarity" },
-                            options = clarityOptions,
-                            onOptionSelected = { waterClarity = it },
+                            label = "Pressure Trend",
+                            selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
+                            options = pressureOptions,
+                            onOptionSelected = { pressureTrend = it },
                             modifier = Modifier.weight(1f)
                         )
                     }
 
                     DropdownFilter(
-                        label = "Pressure Trend",
-                        selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
-                        options = pressureOptions,
-                        onOptionSelected = { pressureTrend = it },
+                        label = "Water Clarity",
+                        selectedOption = waterClarity.ifBlank { "Select Clarity" },
+                        options = clarityOptions,
+                        onOptionSelected = { waterClarity = it },
                         modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("Notes") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     var weatherMessage by remember { mutableStateOf<String?>(null) }
@@ -231,6 +219,13 @@ fun StartTripScreen(
                                         val windDesc = viewModel.mapWindSpeedToCondition(data.windSpeedMph)
                                         if (windOptions.contains(windDesc)) {
                                             windCondition = windDesc
+                                        }
+
+                                        // Map pressure trend
+                                        data.pressureTrend?.let {
+                                            if (pressureOptions.contains(it)) {
+                                                pressureTrend = it
+                                            }
                                         }
 
                                         weatherMessage = "Weather filled."

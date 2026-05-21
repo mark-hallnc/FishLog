@@ -156,6 +156,49 @@ fun EditTripScreen(
                         existingWaterBodies = existingWaterBodies,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DropdownFilter(
+                            label = "Sky",
+                            selectedOption = skyCondition.ifBlank { "Select Sky" },
+                            options = skyOptions,
+                            onOptionSelected = { skyCondition = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DropdownFilter(
+                            label = "Wind",
+                            selectedOption = windCondition.ifBlank { "Select Wind" },
+                            options = windOptions,
+                            onOptionSelected = { windCondition = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = airTemp,
+                            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) airTemp = it },
+                            label = { Text("Air Temp (°F)") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        )
+                        DropdownFilter(
+                            label = "Pressure Trend",
+                            selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
+                            options = pressureOptions,
+                            onOptionSelected = { pressureTrend = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    DropdownFilter(
+                        label = "Water Clarity",
+                        selectedOption = waterClarity.ifBlank { "Select Clarity" },
+                        options = clarityOptions,
+                        onOptionSelected = { waterClarity = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
@@ -265,6 +308,13 @@ fun EditTripScreen(
                                         val windDesc = viewModel.mapWindSpeedToCondition(data.windSpeedMph)
                                         if (windOptions.contains(windDesc)) {
                                             windCondition = windDesc
+                                        }
+
+                                        // Map pressure trend
+                                        data.pressureTrend?.let {
+                                            if (pressureOptions.contains(it)) {
+                                                pressureTrend = it
+                                            }
                                         }
 
                                         weatherMessage = "Weather filled."

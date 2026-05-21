@@ -26,6 +26,7 @@ data class WeatherData(
     val precipitationIn: Double?,
     val weatherCode: Int?,
     val weatherSummary: String,
+    val pressureTrend: String?,
     val fetchedAt: Long,
     val source: String
 )
@@ -112,6 +113,7 @@ class WeatherRepository {
         val urlString = "https://api.open-meteo.com/v1/forecast?" +
                 "latitude=$latitude&longitude=$longitude" +
                 "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m" +
+                "&hourly=pressure_msl" +
                 "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto"
         
         Log.d(TAG, "Requesting weather: $urlString")
@@ -133,12 +135,45 @@ class WeatherRepository {
 
                 val root = json.parseToJsonElement(responseBody).jsonObject
                 val current = root["current"]?.jsonObject ?: throw Exception("Weather response could not be read: 'current' object missing.")
+                val hourly = root["hourly"]?.jsonObject
 
                 Log.d(TAG, "'current' object found in JSON")
 
                 val code = current["weather_code"]?.jsonPrimitive?.intOrNull
                 val pressure = current["pressure_msl"]?.jsonPrimitive?.doubleOrNull 
                     ?: current["surface_pressure"]?.jsonPrimitive?.doubleOrNull
+
+                // Calculate pressure trend
+                var trend: String? = null
+                if (hourly != null && pressure != null) {
+                    try {
+                        val times = hourly["time"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+                        val pressures = hourly["pressure_msl"]?.jsonArray?.map { it.jsonPrimitive.doubleOrNull } ?: emptyList()
+                        
+                        val nowEpoch = System.currentTimeMillis() / 1000
+                        // Find index of current hour (approx)
+                        val currentIndex = times.indexOfFirst { timeStr ->
+                            // Open-Meteo time is ISO8601 "2026-05-20T14:00"
+                            val timeEpoch = java.time.LocalDateTime.parse(timeStr).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+                            timeEpoch > nowEpoch - 1800 // Within 30 mins
+                        }.let { if (it == -1) pressures.size - 1 else it }
+
+                        if (currentIndex >= 3) {
+                            val prevPressure = pressures[currentIndex - 3]
+                            if (prevPressure != null) {
+                                val delta = pressure - prevPressure
+                                trend = when {
+                                    delta >= 1.0 -> "Rising"
+                                    delta <= -1.0 -> "Falling"
+                                    else -> "Steady"
+                                }
+                                Log.d(TAG, "Pressure trend calculated: current=$pressure, prev=$prevPressure, delta=$delta, trend=$trend")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Could not calculate pressure trend", e)
+                    }
+                }
 
                 val data = WeatherData(
                     airTempF = current["temperature_2m"]?.jsonPrimitive?.doubleOrNull,
@@ -152,6 +187,7 @@ class WeatherRepository {
                     precipitationIn = current["precipitation"]?.jsonPrimitive?.doubleOrNull,
                     weatherCode = code,
                     weatherSummary = mapWeatherCodeToSummary(code),
+                    pressureTrend = trend,
                     fetchedAt = System.currentTimeMillis(),
                     source = "Open-Meteo"
                 )
