@@ -36,8 +36,14 @@ fun SettingsScreen(
     viewModel: FishLogViewModel,
     appearanceMode: String,
     unitSystem: String,
+    mapCenterMode: String,
+    mapDefaultLat: Double?,
+    mapDefaultLon: Double?,
     onAppearanceModeChange: (String) -> Unit,
     onUnitSystemChange: (String) -> Unit,
+    onMapCenterModeChange: (String) -> Unit,
+    onClearDefaultMapLocation: () -> Unit,
+    onChooseDefaultMapLocation: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -137,6 +143,101 @@ fun SettingsScreen(
 
     var showAppearanceDialog by remember { mutableStateOf(false) }
     var showUnitDialog by remember { mutableStateOf(false) }
+    var showMapCenterDialog by remember { mutableStateOf(false) }
+
+    if (showMapCenterDialog) {
+        AlertDialog(
+            onDismissRequest = { showMapCenterDialog = false },
+            title = { Text("Default Map Center") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Choose where the map opens by default.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    AppearanceOption(
+                        label = "Current Location",
+                        selected = mapCenterMode == AppPreferences.MAP_CENTER_CURRENT,
+                        onClick = {
+                            onMapCenterModeChange(AppPreferences.MAP_CENTER_CURRENT)
+                        }
+                    )
+                    Text(
+                        "Open the map near me when GPS is available.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 36.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    AppearanceOption(
+                        label = "Saved Location",
+                        selected = mapCenterMode == AppPreferences.MAP_CENTER_SAVED,
+                        onClick = {
+                            if (mapDefaultLat != null && mapDefaultLon != null) {
+                                onMapCenterModeChange(AppPreferences.MAP_CENTER_SAVED)
+                            } else {
+                                onChooseDefaultMapLocation()
+                                showMapCenterDialog = false
+                            }
+                        }
+                    )
+                    Text(
+                        "Open the map to a spot I choose.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 36.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            onChooseDefaultMapLocation()
+                            showMapCenterDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Choose on Map")
+                    }
+
+                    if (mapDefaultLat != null) {
+                        OutlinedButton(
+                            onClick = {
+                                onClearDefaultMapLocation()
+                                onMapCenterModeChange(AppPreferences.MAP_CENTER_CURRENT)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear Saved Location")
+                        }
+                    }
+
+                    Text(
+                        "Saved locations work offline, but map detail depends on cached tiles.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMapCenterDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
 
     if (showAppearanceDialog) {
         AlertDialog(
@@ -272,11 +373,27 @@ fun SettingsScreen(
                     onClick = { showUnitDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                
+                val mapCenterLabel = if (mapCenterMode == AppPreferences.MAP_CENTER_SAVED && mapDefaultLat != null) {
+                    "Saved location"
+                } else {
+                    "Current location"
+                }
+                
+                val mapCenterHelper = if (mapCenterMode == AppPreferences.MAP_CENTER_SAVED && mapDefaultLat != null) {
+                    "${String.format(java.util.Locale.US, "%.4f", mapDefaultLat)}, ${String.format(java.util.Locale.US, "%.4f", mapDefaultLon)}"
+                } else if (mapCenterMode == AppPreferences.MAP_CENTER_SAVED) {
+                    "Saved location not set"
+                } else {
+                    "Map opens near your GPS location when available."
+                }
+
                 SettingRow(
                     icon = Icons.Default.MyLocation,
                     title = "Default Map Center",
-                    subtitle = "Current location",
-                    helperText = "Map opens near your GPS location when permission is available."
+                    subtitle = mapCenterLabel,
+                    helperText = mapCenterHelper,
+                    onClick = { showMapCenterDialog = true }
                 )
             }
 

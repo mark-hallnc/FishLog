@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.location.LocationService
@@ -60,7 +61,11 @@ fun MapScreen(
     showFilters: Boolean,
     onShowFiltersChange: (Boolean) -> Unit,
     selectedLogForOverlay: CatchLog?,
-    onLogForOverlayChange: (CatchLog?) -> Unit
+    onLogForOverlayChange: (CatchLog?) -> Unit,
+    mapCenterMode: String,
+    mapDefaultLat: Double?,
+    mapDefaultLon: Double?,
+    mapDefaultZoom: Double
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -196,14 +201,22 @@ fun MapScreen(
     LaunchedEffect(Unit) {
         if (!initialCenterApplied) {
             if (initialReturnState != null) {
+                // Priority 1: Returning from a detail screen
                 mapView.controller.setCenter(GeoPoint(initialReturnState.centerLat, initialReturnState.centerLon))
                 mapView.controller.setZoom(initialReturnState.zoom)
                 initialCenterApplied = true
             } else if (focusLog != null && focusLog.latitude != null && focusLog.longitude != null) {
+                // Priority 2: Focused log (e.g. from history "View on Map")
                 mapView.controller.setCenter(GeoPoint(focusLog.latitude, focusLog.longitude))
                 mapView.controller.setZoom(15.0)
                 initialCenterApplied = true
+            } else if (mapCenterMode == AppPreferences.MAP_CENTER_SAVED && mapDefaultLat != null && mapDefaultLon != null) {
+                // Priority 3: Saved default location
+                mapView.controller.setCenter(GeoPoint(mapDefaultLat, mapDefaultLon))
+                mapView.controller.setZoom(mapDefaultZoom)
+                initialCenterApplied = true
             } else {
+                // Priority 4/5: Current location or fallback
                 centerOnUser()
             }
         }

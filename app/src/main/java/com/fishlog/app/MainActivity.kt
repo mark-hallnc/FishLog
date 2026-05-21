@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.map.MapScreen
+import com.fishlog.app.map.MapLocationPickerScreen
 import com.fishlog.app.ui.CatchFormScreen
 import com.fishlog.app.ui.NoCatchFormScreen
 import com.fishlog.app.ui.CatchListScreen
@@ -93,6 +94,11 @@ class MainActivity : ComponentActivity() {
             val appPreferences = remember { AppPreferences(applicationContext) }
             var appearanceMode by remember { mutableStateOf(appPreferences.getAppearanceMode()) }
             var unitSystem by remember { mutableStateOf(appPreferences.getUnitSystem()) }
+            
+            var mapCenterMode by remember { mutableStateOf(appPreferences.getMapCenterMode()) }
+            var mapDefaultLat by remember { mutableStateOf(appPreferences.getMapLatitude()) }
+            var mapDefaultLon by remember { mutableStateOf(appPreferences.getMapLongitude()) }
+            var mapDefaultZoom by remember { mutableStateOf(appPreferences.getMapZoom()) }
 
             val darkTheme = when (appearanceMode) {
                 AppPreferences.MODE_LIGHT -> false
@@ -105,6 +111,10 @@ class MainActivity : ComponentActivity() {
                     viewModel = viewModel,
                     appearanceMode = appearanceMode,
                     unitSystem = unitSystem,
+                    mapCenterMode = mapCenterMode,
+                    mapDefaultLat = mapDefaultLat,
+                    mapDefaultLon = mapDefaultLon,
+                    mapDefaultZoom = mapDefaultZoom,
                     onAppearanceModeChange = { mode ->
                         appearanceMode = mode
                         appPreferences.setAppearanceMode(mode)
@@ -112,6 +122,21 @@ class MainActivity : ComponentActivity() {
                     onUnitSystemChange = { system ->
                         unitSystem = system
                         appPreferences.setUnitSystem(system)
+                    },
+                    onMapCenterModeChange = { mode ->
+                        mapCenterMode = mode
+                        appPreferences.setMapCenterMode(mode)
+                    },
+                    onSetDefaultMapLocation = { lat, lon, zoom ->
+                        mapDefaultLat = lat
+                        mapDefaultLon = lon
+                        mapDefaultZoom = zoom
+                        appPreferences.setSavedMapLocation(lat, lon, zoom)
+                    },
+                    onClearDefaultMapLocation = {
+                        mapDefaultLat = null
+                        mapDefaultLon = null
+                        appPreferences.clearSavedMapLocation()
                     }
                 )
             }
@@ -124,8 +149,15 @@ fun MainScreen(
     viewModel: FishLogViewModel,
     appearanceMode: String,
     unitSystem: String,
+    mapCenterMode: String,
+    mapDefaultLat: Double?,
+    mapDefaultLon: Double?,
+    mapDefaultZoom: Double,
     onAppearanceModeChange: (String) -> Unit,
-    onUnitSystemChange: (String) -> Unit
+    onUnitSystemChange: (String) -> Unit,
+    onMapCenterModeChange: (String) -> Unit,
+    onSetDefaultMapLocation: (Double, Double, Double) -> Unit,
+    onClearDefaultMapLocation: () -> Unit
 ) {
     val context = LocalContext.current
     val photoStorageHelper = remember { PhotoStorageHelper(context) }
@@ -332,7 +364,22 @@ fun MainScreen(
                 showFilters = mapShowFilters,
                 onShowFiltersChange = { mapShowFilters = it },
                 selectedLogForOverlay = mapSelectedLogForOverlay,
-                onLogForOverlayChange = { mapSelectedLogForOverlay = it }
+                onLogForOverlayChange = { mapSelectedLogForOverlay = it },
+                mapCenterMode = mapCenterMode,
+                mapDefaultLat = mapDefaultLat,
+                mapDefaultLon = mapDefaultLon,
+                mapDefaultZoom = mapDefaultZoom
+            )
+            "MapLocationPicker" -> MapLocationPickerScreen(
+                initialLat = mapDefaultLat,
+                initialLon = mapDefaultLon,
+                initialZoom = mapDefaultZoom,
+                viewModel = viewModel,
+                onLocationPicked = { lat, lon, zoom ->
+                    onSetDefaultMapLocation(lat, lon, zoom)
+                    currentScreen = "Settings"
+                },
+                onBack = { currentScreen = "Settings" }
             )
             "Insights" -> InsightsScreen(
                 viewModel = viewModel,
@@ -368,8 +415,14 @@ fun MainScreen(
                 viewModel = viewModel,
                 appearanceMode = appearanceMode,
                 unitSystem = unitSystem,
+                mapCenterMode = mapCenterMode,
+                mapDefaultLat = mapDefaultLat,
+                mapDefaultLon = mapDefaultLon,
                 onAppearanceModeChange = onAppearanceModeChange,
                 onUnitSystemChange = onUnitSystemChange,
+                onMapCenterModeChange = onMapCenterModeChange,
+                onClearDefaultMapLocation = onClearDefaultMapLocation,
+                onChooseDefaultMapLocation = { currentScreen = "MapLocationPicker" },
                 onBack = { currentScreen = "Home" }
             )
         }
