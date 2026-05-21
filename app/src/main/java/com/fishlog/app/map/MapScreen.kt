@@ -207,9 +207,15 @@ fun MapScreen(
                 initialCenterApplied = true
             } else if (focusLog != null && focusLog.latitude != null && focusLog.longitude != null) {
                 // Priority 2: Focused log (e.g. from history "View on Map")
-                mapView.controller.setCenter(GeoPoint(focusLog.latitude, focusLog.longitude))
-                mapView.controller.setZoom(15.0)
+                // Mark as handled immediately to avoid any race conditions
                 initialCenterApplied = true
+                // Use post to ensure the map is laid out before centering
+                mapView.post {
+                    val target = GeoPoint(focusLog.latitude, focusLog.longitude)
+                    mapView.controller.setZoom(17.0) // Zoom in closer for better focus
+                    mapView.controller.setCenter(target)
+                    mapView.invalidate()
+                }
             } else if (mapCenterMode == AppPreferences.MAP_CENTER_SAVED && mapDefaultLat != null && mapDefaultLon != null) {
                 // Priority 3: Saved default location
                 mapView.controller.setCenter(GeoPoint(mapDefaultLat, mapDefaultLon))
