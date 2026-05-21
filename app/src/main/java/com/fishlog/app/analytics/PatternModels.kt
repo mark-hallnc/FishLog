@@ -1,5 +1,7 @@
 package com.fishlog.app.analytics
 
+import com.fishlog.app.ui.DateRangeFilter
+
 data class PatternEngineResult(
     val totalCatchLogs: Int,
     val totalNoCatchLogs: Int,
@@ -22,4 +24,10 @@ data class PatternInsight(
     val observationCount: Int,
     val catchRate: Double,
     val confidenceLabel: String
+)
+
+data class PatternEngineFilters(
+    val species: String? = null,
+    val waterBody: String? = null,
+    val dateRange: DateRangeFilter = DateRangeFilter.AllDates
 )

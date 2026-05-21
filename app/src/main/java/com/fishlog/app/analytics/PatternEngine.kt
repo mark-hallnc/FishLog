@@ -2,22 +2,57 @@ package com.fishlog.app.analytics
 
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
+import com.fishlog.app.ui.DateRangeFilter
 import java.util.Calendar
 
 object PatternEngine {
 
-    fun analyze(logs: List<CatchLog>, trips: List<FishingTrip>): PatternEngineResult {
+    fun analyze(
+        logs: List<CatchLog>, 
+        trips: List<FishingTrip>,
+        filters: PatternEngineFilters = PatternEngineFilters()
+    ): PatternEngineResult {
         val tripById = trips.associateBy { it.id }
         
-        val catchLogs = logs.filter { it.logType == "CATCH" }
-        val noCatchLogs = logs.filter { it.logType == "NO_CATCH" }
+        // 1. Filter the base log set
+        val filteredLogs = logs.filter { log ->
+            // Date Filter
+            if (!filters.dateRange.matches(log.timestamp)) return@filter false
+
+            // Water Body Filter
+            if (filters.waterBody != null && filters.waterBody != "All Water Bodies") {
+                val trip = tripById[log.tripId]
+                val wb = trip?.waterBody?.trim()
+                if (wb?.equals(filters.waterBody, ignoreCase = true) != true) return@filter false
+            }
+
+            // Species Filter
+            if (filters.species != null && filters.species != "All Species") {
+                // If it's a catch, must match species
+                if (log.logType == "CATCH") {
+                    if (!log.species.equals(filters.species, ignoreCase = true)) return@filter false
+                }
+                // If it's a no-catch, we include it if it's "general" (blank species) 
+                // because it represents a trip/observation where the target might have been that species.
+                // This preserves catch rate context.
+                else if (log.logType == "NO_CATCH") {
+                    if (log.species.isNotBlank() && !log.species.equals(filters.species, ignoreCase = true)) return@filter false
+                }
+            }
+
+            true
+        }
+
+        val catchLogs = filteredLogs.filter { it.logType == "CATCH" }
+        val noCatchLogs = filteredLogs.filter { it.logType == "NO_CATCH" }
         
         val totalCatchLogs = catchLogs.size
         val totalNoCatchLogs = noCatchLogs.size
         val totalObservations = totalCatchLogs + totalNoCatchLogs
 
-        // 1. Best Baits by Species
-        val baitInsights = logs.filter { it.bait.isNotBlank() }
+        // 2. Compute Insights from filtered set
+        // Best Baits by Species
+        val baitInsights = filteredLogs.filter { it.bait.isNotBlank() }
             .groupBy { "${it.species}|${it.bait}" }
             .map { (key, group) ->
                 val parts = key.split("|")
@@ -34,8 +69,8 @@ object PatternEngine {
             .sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
             .take(5)
 
-        // 2. Depth Ranges
-        val depthInsights = logs.mapNotNull { log ->
+        // Depth Ranges
+        val depthInsights = filteredLogs.mapNotNull { log ->
             val depth = log.depthFeet ?: log.depth.toDoubleOrNull()
             depth?.let { log to it }
         }.groupBy { (_, d) ->
@@ -51,8 +86,8 @@ object PatternEngine {
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
-        // 3. Water Temp Ranges
-        val tempInsights = logs.mapNotNull { log ->
+        // Water Temp Ranges
+        val tempInsights = filteredLogs.mapNotNull { log ->
             val temp = log.waterTempF ?: log.waterTemp.toDoubleOrNull()
             temp?.let { log to it }
         }.groupBy { (_, t) ->
@@ -68,8 +103,8 @@ object PatternEngine {
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
-        // 4. Time of Day
-        val timeInsights = logs.groupBy { log ->
+        // Time of Day
+        val timeInsights = filteredLogs.groupBy { log ->
             val cal = Calendar.getInstance().apply { timeInMillis = log.timestamp }
             val hour = cal.get(Calendar.HOUR_OF_DAY)
             when (hour) {
@@ -83,8 +118,8 @@ object PatternEngine {
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
-        // 5. Water Bodies
-        val waterBodyInsights = logs.mapNotNull { log ->
+        // Water Bodies
+        val waterBodyInsights = filteredLogs.mapNotNull { log ->
             val trip = tripById[log.tripId]
             val wb = trip?.waterBody?.trim()
             if (!wb.isNullOrBlank()) log to wb else null
@@ -94,8 +129,8 @@ object PatternEngine {
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
-        // 6. Moon Phase
-        val moonInsights = logs.mapNotNull { log ->
+        // Moon Phase
+        val moonInsights = filteredLogs.mapNotNull { log ->
             val trip = tripById[log.tripId]
             val moon = trip?.moonPhaseName
             if (!moon.isNullOrBlank()) log to moon else null
