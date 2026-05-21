@@ -298,24 +298,100 @@ fun TripDetailScreen(
                 }
             }
 
-            if (trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank() || 
-                trip.airTempF != null || trip.waterClarity.isNotBlank() || trip.pressureTrend.isNotBlank()) {
+            val hasConditions = trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank() || 
+                    trip.airTempF != null || trip.waterClarity.isNotBlank() || trip.pressureTrend.isNotBlank() ||
+                    trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()
+
+            if (hasConditions) {
                 InsightCard(title = "Conditions") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank()) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                if (trip.skyCondition.isNotBlank()) StatItem("Sky", trip.skyCondition, Modifier.weight(1f))
-                                if (trip.windCondition.isNotBlank()) StatItem("Wind", trip.windCondition, Modifier.weight(1f))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // 1. Condition
+                        val conditionValue = buildString {
+                            if (trip.weatherSummary.isNotBlank()) {
+                                append(trip.weatherSummary)
+                                if (trip.skyCondition.isNotBlank() && !trip.skyCondition.equals(trip.weatherSummary, ignoreCase = true)) {
+                                    append(" · noted: ${trip.skyCondition}")
+                                }
+                            } else if (trip.skyCondition.isNotBlank()) {
+                                append(trip.skyCondition)
                             }
                         }
-                        if (trip.airTempF != null || trip.waterClarity.isNotBlank()) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                if (trip.airTempF != null) StatItem("Air Temp", "${trip.airTempF}$tempSuffix", Modifier.weight(1f))
-                                if (trip.waterClarity.isNotBlank()) StatItem("Clarity", trip.waterClarity, Modifier.weight(1f))
+                        if (conditionValue.isNotBlank()) {
+                            ConditionDetailItem("Condition", conditionValue)
+                        }
+
+                        // 2. Air Temp
+                        val tempValue = buildString {
+                            if (trip.airTempF != null) {
+                                append("${trip.airTempF.toInt()}°$tempSuffix")
+                                if (trip.feelsLikeF != null) {
+                                    append(" · feels like ${trip.feelsLikeF.toInt()}°$tempSuffix")
+                                }
+                            } else if (trip.feelsLikeF != null) {
+                                append("Feels like ${trip.feelsLikeF.toInt()}°$tempSuffix")
                             }
                         }
-                        if (trip.pressureTrend.isNotBlank()) {
-                            StatItem("Pressure", trip.pressureTrend, Modifier.fillMaxWidth())
+                        if (tempValue.isNotBlank()) {
+                            ConditionDetailItem("Air Temp", tempValue)
+                        }
+
+                        // 3. Wind
+                        val windValue = buildString {
+                            if (trip.windCondition.isNotBlank()) {
+                                append(trip.windCondition)
+                            }
+                            if (trip.windSpeedMph != null) {
+                                if (this.isNotEmpty()) append(" · ")
+                                append("${trip.windSpeedMph.toInt()} mph")
+                                val dir = getWindDirection(trip.windDirectionDegrees)
+                                if (dir.isNotBlank()) append(" $dir")
+                                if (trip.windGustMph != null && trip.windGustMph > (trip.windSpeedMph ?: 0.0) + 2) {
+                                    append(" · gusts ${trip.windGustMph.toInt()} mph")
+                                }
+                            }
+                        }
+                        if (windValue.isNotBlank()) {
+                            ConditionDetailItem("Wind", windValue)
+                        }
+
+                        // 4. Pressure
+                        val pressureValue = buildString {
+                            if (trip.barometricPressureHpa != null) {
+                                append("${trip.barometricPressureHpa.toInt()} hPa")
+                            }
+                            if (trip.pressureTrend.isNotBlank()) {
+                                if (this.isNotEmpty()) append(" ")
+                                append(getPressureTrendIcon(trip.pressureTrend))
+                                append(" ${trip.pressureTrend}")
+                            }
+                        }
+                        if (pressureValue.isNotBlank()) {
+                            ConditionDetailItem("Pressure", pressureValue)
+                        }
+
+                        // 5. Humidity, Cloud Cover, Precipitation
+                        if (trip.humidityPercent != null) {
+                            ConditionDetailItem("Humidity", "${trip.humidityPercent.toInt()}%")
+                        }
+                        if (trip.cloudCoverPercent != null) {
+                            ConditionDetailItem("Cloud Cover", "${trip.cloudCoverPercent.toInt()}%")
+                        }
+                        if (trip.precipitationIn != null && trip.precipitationIn > 0) {
+                            ConditionDetailItem("Precipitation", "${String.format("%.2f", trip.precipitationIn)} in")
+                        }
+
+                        // 6. Water Clarity
+                        if (trip.waterClarity.isNotBlank()) {
+                            ConditionDetailItem("Water Clarity", trip.waterClarity)
+                        }
+
+                        if (trip.weatherAutoFilled) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Auto-filled weather",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                            )
                         }
                     }
                 }
@@ -344,40 +420,6 @@ fun TripDetailScreen(
                                 StatItem("Moon Age", "${String.format("%.1f", trip.moonAgeDays ?: 0.0)} days", Modifier.weight(1f))
                                 StatItem("Trend", if (trip.moonWaxing == true) "Waxing" else "Waning", Modifier.weight(1f))
                             }
-                        }
-                    }
-                }
-            }
-
-            if (trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()) {
-                InsightCard(title = "Weather Details") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (trip.weatherAutoFilled) {
-                            Text("Auto-filled conditions", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                        }
-                        
-                        if (trip.weatherSummary.isNotBlank()) {
-                            Text(trip.weatherSummary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        }
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (trip.feelsLikeF != null) StatItem("Feels Like", "${trip.feelsLikeF.toInt()}°F", Modifier.weight(1f))
-                            if (trip.humidityPercent != null) StatItem("Humidity", "${trip.humidityPercent.toInt()}%", Modifier.weight(1f))
-                        }
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (trip.windSpeedMph != null) StatItem("Wind Speed", "${trip.windSpeedMph.toInt()} mph", Modifier.weight(1f))
-                            if (trip.windDirectionDegrees != null) StatItem("Wind Dir", "${trip.windDirectionDegrees.toInt()}°", Modifier.weight(1f))
-                        }
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (trip.windGustMph != null) StatItem("Wind Gusts", "${trip.windGustMph.toInt()} mph", Modifier.weight(1f))
-                            if (trip.barometricPressureHpa != null) StatItem("Pressure", "${trip.barometricPressureHpa.toInt()} hPa", Modifier.weight(1f))
-                        }
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (trip.cloudCoverPercent != null) StatItem("Cloud Cover", "${trip.cloudCoverPercent.toInt()}%", Modifier.weight(1f))
-                            if (trip.precipitationIn != null) StatItem("Rain/Snow", "${trip.precipitationIn} in", Modifier.weight(1f))
                         }
                     }
                 }
@@ -419,5 +461,22 @@ private fun getWindDirection(degrees: Double?): String {
     if (degrees == null) return ""
     val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW", "N")
     return directions[((degrees % 360) / 45).toInt()]
+}
+
+@Composable
+private fun ConditionDetailItem(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+    }
+}
+
+private fun getPressureTrendIcon(trend: String): String {
+    return when {
+        trend.contains("Rising", ignoreCase = true) || trend.contains("Increasing", ignoreCase = true) || trend.contains("Up", ignoreCase = true) -> "↑"
+        trend.contains("Falling", ignoreCase = true) || trend.contains("Decreasing", ignoreCase = true) || trend.contains("Down", ignoreCase = true) -> "↓"
+        trend.contains("Steady", ignoreCase = true) || trend.contains("Stable", ignoreCase = true) -> "→"
+        else -> ""
+    }
 }
 

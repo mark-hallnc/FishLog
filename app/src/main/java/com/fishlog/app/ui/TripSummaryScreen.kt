@@ -147,21 +147,24 @@ fun TripSummaryScreen(
                 }
             }
 
-            if (trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank() || 
-                trip.airTempF != null || trip.waterClarity.isNotBlank() || trip.pressureTrend.isNotBlank()) {
+            val hasConditions = trip.skyCondition.isNotBlank() || trip.windCondition.isNotBlank() || 
+                trip.airTempF != null || trip.waterClarity.isNotBlank() || trip.pressureTrend.isNotBlank() ||
+                trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()
+
+            if (hasConditions) {
                 InsightCard(title = "Conditions") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         val row1 = listOfNotNull(
-                            if (trip.skyCondition.isNotBlank()) "Sky: ${trip.skyCondition}" else null,
-                            if (trip.windCondition.isNotBlank()) "Wind: ${trip.windCondition}" else null
+                            trip.weatherSummary.ifBlank { trip.skyCondition.ifBlank { null } },
+                            trip.airTempF?.let { "${it.toInt()}$tempSuffix" }
                         )
                         if (row1.isNotEmpty()) {
                             Text(row1.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
                         }
                         
                         val row2 = listOfNotNull(
-                            trip.airTempF?.let { "Temp: ${it.toInt()}$tempSuffix" },
-                            if (trip.waterClarity.isNotBlank()) "Clarity: ${trip.waterClarity}" else null
+                            if (trip.windSpeedMph != null) "Wind ${trip.windSpeedMph.toInt()} mph" else trip.windCondition.ifBlank { null },
+                            if (trip.waterClarity.isNotBlank()) "Water Clarity: ${trip.waterClarity}" else null
                         )
                         if (row2.isNotEmpty()) {
                             Text(row2.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
@@ -172,6 +175,14 @@ fun TripSummaryScreen(
                         }
                     }
                 }
+            } else {
+                Text(
+                    "Conditions not recorded.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
             }
 
             if (trip.moonPhaseName.isNotBlank()) {
@@ -192,31 +203,6 @@ fun TripSummaryScreen(
                         )
                     }
                 }
-            }
-
-            if (trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()) {
-                InsightCard(title = "Weather") {
-                    val weatherParts = listOfNotNull(
-                        trip.weatherSummary.ifBlank { null },
-                        trip.airTempF?.let { "${it.toInt()}°F" },
-                        trip.windSpeedMph?.let { "Wind ${it.toInt()} mph" },
-                        trip.cloudCoverPercent?.let { "$it% clouds" }
-                    )
-                    Text(
-                        text = weatherParts.joinToString(" · "),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
- else {
-                Text(
-                    "Conditions not recorded.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
             }
 
             if (trip.notes.isNotBlank()) {
