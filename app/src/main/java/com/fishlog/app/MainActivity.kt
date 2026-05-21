@@ -387,6 +387,7 @@ fun MainScreen(
                 onBack = { currentScreen = "Home" }
             )
             "AdvancedAnalytics" -> AdvancedAnalyticsScreen(
+                viewModel = viewModel,
                 onBack = { currentScreen = "Home" }
             )
             "TripHistory" -> TripHistoryScreen(
