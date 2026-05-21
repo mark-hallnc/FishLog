@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
@@ -29,9 +30,80 @@ data class WeatherData(
     val source: String
 )
 
+@Serializable
+data class DailyForecastData(
+    val condition: String,
+    val weatherCode: Int?,
+    val highTempF: Double?,
+    val lowTempF: Double?,
+    val windSpeedMph: Double?,
+    val windGustMph: Double?,
+    val windDirectionDegrees: Double?,
+    val fetchedAt: Long
+)
+
 class WeatherRepository {
     private val TAG = "FishLogWeather"
     private val json = Json { ignoreUnknownKeys = true }
+
+    suspend fun fetchTodayForecast(
+        latitude: Double,
+        longitude: Double
+    ): Result<DailyForecastData> = withContext(Dispatchers.IO) {
+        val urlString = "https://api.open-meteo.com/v1/forecast?" +
+                "latitude=$latitude&longitude=$longitude" +
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant" +
+                "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=1"
+
+        Log.d(TAG, "Requesting forecast: $urlString")
+
+        var connection: HttpURLConnection? = null
+        try {
+            val url = URL(urlString)
+            connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+
+            val responseCode = connection.responseCode
+            if (responseCode == 200) {
+                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                val root = json.parseToJsonElement(responseBody).jsonObject
+                val daily = root["daily"]?.jsonObject ?: throw Exception("Forecast response missing 'daily' object")
+
+                val code = daily["weather_code"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.intOrNull
+                val high = daily["temperature_2m_max"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
+                val low = daily["temperature_2m_min"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
+                val wind = daily["wind_speed_10m_max"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
+                val gust = daily["wind_gusts_10m_max"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
+                val dir = daily["wind_direction_10m_dominant"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
+
+                val data = DailyForecastData(
+                    condition = mapWeatherCodeToSummary(code),
+                    weatherCode = code,
+                    highTempF = high,
+                    lowTempF = low,
+                    windSpeedMph = wind,
+                    windGustMph = gust,
+                    windDirectionDegrees = dir,
+                    fetchedAt = System.currentTimeMillis()
+                )
+
+                if (data.highTempF != null || data.lowTempF != null || data.weatherCode != null) {
+                    Result.success(data)
+                } else {
+                    Result.failure(Exception("No usable forecast fields found"))
+                }
+            } else {
+                Result.failure(Exception("Forecast API error: $responseCode"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching forecast", e)
+            Result.failure(e)
+        } finally {
+            connection?.disconnect()
+        }
+    }
 
     suspend fun fetchWeatherForLocation(
         latitude: Double,

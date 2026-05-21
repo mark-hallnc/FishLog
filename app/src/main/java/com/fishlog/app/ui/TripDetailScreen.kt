@@ -48,6 +48,15 @@ fun TripDetailScreen(
 
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    val isActive = trip.endTime == null
+    val forecast = viewModel.activeTripForecast
+
+    LaunchedEffect(trip.id, isActive, trip.latitude, trip.longitude) {
+        if (isActive) {
+            viewModel.loadActiveTripForecastIfNeeded(trip)
+        }
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -147,6 +156,43 @@ fun TripDetailScreen(
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            if (isActive && forecast != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Today",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        Text(
+                            text = buildString {
+                                append(forecast.condition)
+                                if (forecast.highTempF != null && forecast.lowTempF != null) {
+                                    append(" · ${forecast.highTempF.toInt()}°/${forecast.lowTempF.toInt()}°")
+                                }
+                                if (forecast.windSpeedMph != null) {
+                                    append(" · Wind ${forecast.windSpeedMph.toInt()} mph")
+                                    val dir = getWindDirection(forecast.windDirectionDegrees)
+                                    if (dir.isNotBlank()) append(" $dir")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
@@ -367,5 +413,11 @@ private fun formatDuration(start: Long, end: Long): String {
 private fun formatTimestamp(timestamp: Long): String {
     val sdf = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+private fun getWindDirection(degrees: Double?): String {
+    if (degrees == null) return ""
+    val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW", "N")
+    return directions[((degrees % 360) / 45).toInt()]
 }
 

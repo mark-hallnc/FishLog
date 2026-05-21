@@ -35,6 +35,13 @@ class FishLogViewModel(
     var pendingAuthEmail by mutableStateOf<String?>(null)
         private set
 
+    // Active Trip Forecast State (In-memory only)
+    var activeTripForecast by mutableStateOf<DailyForecastData?>(null)
+        private set
+    private var activeTripForecastForTripId: Long? = null
+    private var activeTripForecastFetchedAt: Long? = null
+    private var activeTripForecastLoading = false
+
     val allCatches: StateFlow<List<CatchLog>> = catchLogDao.getAllCatches()
         .stateIn(
             scope = viewModelScope,
@@ -146,6 +153,37 @@ class FishLogViewModel(
 
     fun clearBackupMessage() {
         backupStatusMessage = null
+    }
+
+    fun loadActiveTripForecastIfNeeded(trip: FishingTrip) {
+        val lat = trip.latitude ?: return
+        val lon = trip.longitude ?: return
+        if (trip.endTime != null) return // Only for active trips
+
+        val now = System.currentTimeMillis()
+        val oneHour = 60 * 60 * 1000L
+
+        val alreadyLoadedRecently = activeTripForecastForTripId == trip.id &&
+                activeTripForecast != null &&
+                (activeTripForecastFetchedAt ?: 0L) > (now - oneHour)
+
+        if (alreadyLoadedRecently || activeTripForecastLoading) return
+
+        activeTripForecastLoading = true
+        viewModelScope.launch {
+            val result = weatherRepository.fetchTodayForecast(lat, lon)
+            if (result.isSuccess) {
+                activeTripForecast = result.getOrNull()
+                activeTripForecastForTripId = trip.id
+                activeTripForecastFetchedAt = System.currentTimeMillis()
+            } else {
+                // On failure, we just leave it null or clear it if it was for a different trip
+                if (activeTripForecastForTripId != trip.id) {
+                    activeTripForecast = null
+                }
+            }
+            activeTripForecastLoading = false
+        }
     }
 
     suspend fun fetchWeather(lat: Double, lon: Double): Result<WeatherData> {
