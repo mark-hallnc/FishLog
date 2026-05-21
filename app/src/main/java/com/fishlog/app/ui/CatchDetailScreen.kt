@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
+import com.fishlog.app.map.StaticMapPreview
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
@@ -205,38 +206,65 @@ fun CatchDetailScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column {
                     Text(
                         text = "Location",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
+                    
                     if (hasLocation) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp)
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            StaticMapPreview(
+                                latitude = catch.latitude!!,
+                                longitude = catch.longitude!!,
+                                isNoCatch = isNoCatch,
+                                modifier = Modifier.fillMaxSize()
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
+                        }
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "View on Map",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Text(
-                                    text = "${String.format("%.6f", catch.latitude)}, ${String.format("%.6f", catch.longitude)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
                             }
+                            Text(
+                                text = "${String.format("%.6f", catch.latitude)}, ${String.format("%.6f", catch.longitude)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            Text(
+                                text = "Tap to view on full map",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                         }
                     } else {
-                        Text(text = "Not saved", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = "Not saved", 
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
                 }
             }
