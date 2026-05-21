@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.data.*
+import com.fishlog.app.billing.FeatureGate
+import com.fishlog.app.billing.PaidFeature
 import kotlinx.coroutines.launch
 import java.io.BufferedWriter
 import java.io.OutputStream
@@ -360,174 +362,210 @@ fun SettingsScreen(
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 5. Cloud Backup
-                Text("Cloud Backup (Optional)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text("Sign in to sync your data to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (viewModel.accountStatus == AccountStatus.SIGNED_OUT) {
-                    var email by remember { mutableStateOf("") }
-                    val isEmailValid = email.contains("@") && email.isNotBlank()
-
-                    Text(
-                        text = "Enter your email and FishLog will send a one-time code. If you do not have an account yet, one will be created.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email Address") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
-                        ),
-                        isError = email.isNotBlank() && !isEmailValid
-                    )
-                    
-                    if (email.isNotBlank() && !isEmailValid) {
+                // 5. Cloud Backup (Future Premium)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.15f)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Cloud Backup", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            SuggestionChip(
+                                onClick = { },
+                                label = { Text(FeatureGate.paidLabel(PaidFeature.CLOUD_BACKUP), fontSize = 10.sp) },
+                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                        
                         Text(
-                            text = "Enter a valid email address.",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                            text = "Optional cloud backup and restore will be a premium feature later. FishLog still works fully offline, and local export/import remains available.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        if (viewModel.accountStatus == AccountStatus.SIGNED_OUT) {
+                            var email by remember { mutableStateOf("") }
+                            val isEmailValid = email.contains("@") && email.isNotBlank()
 
-                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS || 
-                                              viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
-                                              viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
+                            Text(
+                                text = "Enter your email and FishLog will send a one-time code. If you do not have an account yet, one will be created.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
 
-                    Button(
-                        onClick = { viewModel.sendSignInCode(email) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = isEmailValid && !isOperationInProgress
-                    ) {
-                        if (isOperationInProgress) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            OutlinedTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = { Text("Email Address") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                                ),
+                                isError = email.isNotBlank() && !isEmailValid
+                            )
+                            
+                            if (email.isNotBlank() && !isEmailValid) {
+                                Text(
+                                    text = "Enter a valid email address.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS || 
+                                                      viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
+                                                      viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
+
+                            Button(
+                                onClick = { viewModel.sendSignInCode(email) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                enabled = isEmailValid && !isOperationInProgress
+                            ) {
+                                if (isOperationInProgress) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text("Email Me a Sign-In Code")
+                                }
+                            }
+                        } else if (viewModel.accountStatus == AccountStatus.WAITING_FOR_CODE) {
+                            var code by remember { mutableStateOf("") }
+                            val isCodeValid = code.length >= 6
+
+                            Text(
+                                text = "Check your email for the sign-in code.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Verifying: ${viewModel.pendingAuthEmail}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            OutlinedTextField(
+                                value = code,
+                                onValueChange = { code = it },
+                                label = { Text("6-digit Code") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS
+
+                            Button(
+                                onClick = { viewModel.verifyEmailCode(code) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                enabled = isCodeValid && !isOperationInProgress
+                            ) {
+                                if (isOperationInProgress) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text("Verify Code")
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                TextButton(onClick = { viewModel.resendCode() }, enabled = !isOperationInProgress) {
+                                    Text("Resend Code")
+                                }
+                                TextButton(onClick = { viewModel.changeEmail() }, enabled = !isOperationInProgress) {
+                                    Text("Change Email")
+                                }
+                            }
                         } else {
-                            Text("Email Me a Sign-In Code")
-                        }
-                    }
-                } else if (viewModel.accountStatus == AccountStatus.WAITING_FOR_CODE) {
-                    var code by remember { mutableStateOf("") }
-                    val isCodeValid = code.length >= 6
+                            Text(
+                                text = "Signed in as:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Text(
+                                text = viewModel.accountEmail ?: "Unknown",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
 
-                    Text(
-                        text = "Check your email for a sign-in code.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Verifying: ${viewModel.pendingAuthEmail}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                            val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
+                                                      viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
 
-                    OutlinedTextField(
-                        value = code,
-                        onValueChange = { code = it },
-                        label = { Text("6-digit Code") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                        )
-                    )
+                            /**
+                             * TODO: Gate these buttons behind real premium entitlement check.
+                             * For now, they remain placeholders for development.
+                             */
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { viewModel.backupNow() },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isOperationInProgress
+                                ) {
+                                    if (viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Backing up...", fontSize = 12.sp)
+                                    } else {
+                                        Text("Backup Now", fontSize = 12.sp)
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.restoreFromCloud() },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isOperationInProgress
+                                ) {
+                                    if (viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Restoring...", fontSize = 12.sp)
+                                    } else {
+                                        Text("Restore", fontSize = 12.sp)
+                                    }
+                                }
+                            }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.AUTH_IN_PROGRESS
-
-                    Button(
-                        onClick = { viewModel.verifyEmailCode(code) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = isCodeValid && !isOperationInProgress
-                    ) {
-                        if (isOperationInProgress) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text("Verify Code")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = { viewModel.resendCode() }, enabled = !isOperationInProgress) {
-                            Text("Resend Code")
-                        }
-                        TextButton(onClick = { viewModel.changeEmail() }, enabled = !isOperationInProgress) {
-                            Text("Change Email")
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "Signed in as:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = viewModel.accountEmail ?: "Unknown",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
-                                              viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { viewModel.backupNow() },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isOperationInProgress
-                        ) {
-                            if (viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Backing up...", fontSize = 12.sp)
-                            } else {
-                                Text("Backup Now", fontSize = 12.sp)
+                            TextButton(
+                                onClick = { viewModel.signOut() },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !isOperationInProgress
+                            ) {
+                                Text("Sign Out", color = MaterialTheme.colorScheme.error)
                             }
                         }
-                        OutlinedButton(
-                            onClick = { viewModel.restoreFromCloud() },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isOperationInProgress
-                        ) {
-                            if (viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Restoring...", fontSize = 12.sp)
-                            } else {
-                                Text("Restore", fontSize = 12.sp)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    TextButton(
-                        onClick = { viewModel.signOut() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isOperationInProgress
-                    ) {
-                        Text("Sign Out", color = MaterialTheme.colorScheme.error)
                     }
                 }
 

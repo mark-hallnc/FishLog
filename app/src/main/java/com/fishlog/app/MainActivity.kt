@@ -45,6 +45,7 @@ import com.fishlog.app.ui.TripHistoryScreen
 import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.SettingsScreen
+import com.fishlog.app.ui.AdvancedAnalyticsScreen
 import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
@@ -54,6 +55,8 @@ import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.LogTypeFilter
 import com.fishlog.app.ui.MapReturnState
+import com.fishlog.app.billing.PaidFeature
+import com.fishlog.app.billing.FeatureGate
 
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -172,6 +175,7 @@ fun MainScreen(
                     currentScreen = "Map" 
                 },
                 onInsightsClick = { currentScreen = "Insights" },
+                onAdvancedAnalyticsClick = { currentScreen = "AdvancedAnalytics" },
                 onTripHistoryClick = { currentScreen = "TripHistory" },
                 onSettingsClick = { currentScreen = "Settings" },
                 onStartTripClick = { currentScreen = "StartTrip" },
@@ -335,6 +339,9 @@ fun MainScreen(
                 unitSystem = unitSystem,
                 onBack = { currentScreen = "Home" }
             )
+            "AdvancedAnalytics" -> AdvancedAnalyticsScreen(
+                onBack = { currentScreen = "Home" }
+            )
             "TripHistory" -> TripHistoryScreen(
                 viewModel = viewModel,
                 onBack = { currentScreen = "Home" },
@@ -377,6 +384,7 @@ fun HomeScreen(
     onHistoryClick: () -> Unit,
     onMapClick: () -> Unit,
     onInsightsClick: () -> Unit,
+    onAdvancedAnalyticsClick: () -> Unit,
     onTripHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onStartTripClick: () -> Unit,
@@ -628,9 +636,18 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "Insights",
-                    subtitle = "Analytics",
+                    subtitle = "Stats & patterns",
                     icon = Icons.Default.Analytics,
                     onClick = onInsightsClick
+                )
+            }
+            item {
+                HomeCard(
+                    title = "Advanced Analytics",
+                    subtitle = "AI & deeper patterns",
+                    icon = Icons.Default.AutoAwesome,
+                    badge = FeatureGate.paidLabel(PaidFeature.ADVANCED_ANALYTICS),
+                    onClick = onAdvancedAnalyticsClick
                 )
             }
         }
@@ -844,6 +861,7 @@ fun HomeCard(
     icon: ImageVector,
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = MaterialTheme.colorScheme.primary,
+    badge: String? = null,
     onClick: () -> Unit
 ) {
     Card(
@@ -858,33 +876,53 @@ fun HomeCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = if (containerColor == MaterialTheme.colorScheme.primaryContainer) 
-                    contentColor else MaterialTheme.colorScheme.secondary
-            )
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    lineHeight = 20.sp
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = if (containerColor == MaterialTheme.colorScheme.primaryContainer) 
+                        contentColor else MaterialTheme.colorScheme.secondary
                 )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = if (containerColor == MaterialTheme.colorScheme.primaryContainer) 
-                            contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        lineHeight = 20.sp
                     )
-                )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = if (containerColor == MaterialTheme.colorScheme.primaryContainer) 
+                                contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+            }
+            
+            if (badge != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape = RoundedCornerShape(topEnd = 24.dp, bottomStart = 12.dp),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = badge,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    )
+                }
             }
         }
     }
