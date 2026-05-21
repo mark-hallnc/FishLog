@@ -26,6 +26,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.map.MapScreen
@@ -383,6 +388,21 @@ fun HomeScreen(
     val catches by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
 
+    val catchPhotos = remember(catches) {
+        catches.filter { it.logType == "CATCH" && !it.photoUri.isNullOrBlank() }.map { it.photoUri!! }
+    }
+
+    var currentPhotoIndex by remember { mutableIntStateOf(0) }
+
+    if (catchPhotos.size > 1) {
+        LaunchedEffect(catchPhotos) {
+            while (true) {
+                delay(10000) // 10 seconds
+                currentPhotoIndex = (currentPhotoIndex + 1) % catchPhotos.size
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -394,6 +414,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
@@ -401,89 +422,121 @@ fun HomeScreen(
                             MaterialTheme.colorScheme.secondary,
                             MaterialTheme.colorScheme.tertiary
                         )
-                    ),
-                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                    )
                 )
-                .padding(24.dp)
         ) {
-            // Decorative background element (subtle wave-like circle)
-            Box(
-                modifier = Modifier
-                    .size(150.dp)
-                    .offset(x = 100.dp, y = (-50).dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.05f))
-            )
-
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = 12.dp, y = (-12).dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-
-            Column(
-                modifier = Modifier.align(Alignment.BottomStart)
-            ) {
-                Text(
-                    text = "FishLog",
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-1).sp
-                    )
-                )
-                Text(
-                    text = "Track catches. Spot patterns.",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Medium
-                    )
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Quick stats row
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    QuickStat(
-                        label = "Trips",
-                        value = trips.size.toString(),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    QuickStat(
-                        label = "Catches",
-                        value = catches.count { it.logType == "CATCH" }.toString(),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    if (trips.isNotEmpty()) {
-                        val lastTripDate = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(trips.maxOf { it.startTime }))
-                        QuickStat(
-                            label = "Last Outing",
-                            value = lastTripDate,
-                            color = MaterialTheme.colorScheme.onPrimary
+            if (catchPhotos.isNotEmpty()) {
+                Crossfade(
+                    targetState = catchPhotos.getOrNull(currentPhotoIndex % catchPhotos.size),
+                    animationSpec = tween(1000),
+                    label = "PhotoSlideshow"
+                ) { photoUri ->
+                    if (photoUri != null) {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
                 }
+                
+                // Readability overlay (dark gradient)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.2f),
+                                    Color.Black.copy(alpha = 0.5f)
+                                )
+                            )
+                        )
+                )
+            } else {
+                // Decorative background element (subtle wave-like circle) - Only if no photos
+                Box(
+                    modifier = Modifier
+                        .size(150.dp)
+                        .offset(x = 100.dp, y = (-50).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.05f))
+                )
+
+                Icon(
+                    imageVector = Icons.Default.Water,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = 10.dp, y = (-10).dp),
+                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f)
+                )
             }
-            
-            Icon(
-                imageVector = Icons.Default.Water,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 10.dp, y = (-10).dp),
-                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f)
-            )
+
+            // Content inside the Hero Area
+            Box(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 12.dp, y = (-12).dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        text = "FishLog",
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-1).sp
+                        )
+                    )
+                    Text(
+                        text = "Track catches. Spot patterns.",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Quick stats row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        QuickStat(
+                            label = "Trips",
+                            value = trips.size.toString(),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        QuickStat(
+                            label = "Catches",
+                            value = catches.count { it.logType == "CATCH" }.toString(),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        if (trips.isNotEmpty()) {
+                            val lastTripDate = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(trips.maxOf { it.startTime }))
+                            QuickStat(
+                                label = "Last Outing",
+                                value = lastTripDate,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
