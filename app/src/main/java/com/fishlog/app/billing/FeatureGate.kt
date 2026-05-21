@@ -21,6 +21,6 @@ object FeatureGate {
     }
 
     fun paidLabel(feature: PaidFeature): String {
-        return "Planned Premium"
+        return "Premium"
     }
 }

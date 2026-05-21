@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -106,6 +107,7 @@ fun StartTripScreen(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 1. Trip Info
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -113,6 +115,7 @@ fun StartTripScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Trip Info", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(
                         value = name,
                         onValueChange = { 
@@ -129,6 +132,97 @@ fun StartTripScreen(
                         existingWaterBodies = existingWaterBodies,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+
+            // 2. Weather
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Weather", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    
+                    var weatherMessage by remember { mutableStateOf<String?>(null) }
+                    var isWeatherLoading by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isWeatherLoading = true
+                                weatherMessage = "Fetching current weather..."
+                                
+                                val loc = locationService.getCurrentLocation()
+                                if (loc != null) {
+                                    val result = viewModel.fetchWeather(loc.latitude, loc.longitude)
+                                    if (result.isSuccess) {
+                                        val data = result.getOrNull()!!
+                                        fetchedWeatherData = data
+                                        airTemp = data.airTempF?.let { "%.1f".format(it) } ?: airTemp
+                                        
+                                        val summary = data.weatherSummary
+                                        if (skyOptions.contains(summary)) {
+                                            skyCondition = summary
+                                        } else if (summary.contains("Cloudy")) {
+                                            skyCondition = "Cloudy"
+                                        } else if (summary.contains("Rain") || summary.contains("Showers")) {
+                                            skyCondition = "Rain"
+                                        } else if (summary.contains("Storm")) {
+                                            skyCondition = "Storms"
+                                        } else {
+                                            skyCondition = "Other"
+                                        }
+
+                                        val windDesc = viewModel.mapWindSpeedToCondition(data.windSpeedMph)
+                                        if (windOptions.contains(windDesc)) {
+                                            windCondition = windDesc
+                                        }
+
+                                        data.pressureTrend?.let {
+                                            if (pressureOptions.contains(it)) {
+                                                pressureTrend = it
+                                            }
+                                        }
+
+                                        weatherMessage = "Weather filled."
+                                    } else {
+                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
+                                    }
+                                } else {
+                                    weatherMessage = "Enable GPS and wait for location to auto-fill weather."
+                                }
+                                isWeatherLoading = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isWeatherLoading
+                    ) {
+                        if (isWeatherLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Fetching...")
+                        } else {
+                            Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Auto-fill Weather")
+                        }
+                    }
+
+                    weatherMessage?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    
+                    Text(
+                        "Auto-fill uses your current location to fetch current conditions.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         DropdownFilter(
                             label = "Sky",
@@ -164,7 +258,19 @@ fun StartTripScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                }
+            }
 
+            // 3. Water Conditions
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Water Conditions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    
                     DropdownFilter(
                         label = "Water Clarity",
                         selectedOption = waterClarity.ifBlank { "Select Clarity" },
@@ -172,6 +278,17 @@ fun StartTripScreen(
                         onOptionSelected = { waterClarity = it },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+
+            // 4. Notes
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
@@ -179,86 +296,6 @@ fun StartTripScreen(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         shape = RoundedCornerShape(12.dp)
-                    )
-
-                    var weatherMessage by remember { mutableStateOf<String?>(null) }
-                    var isWeatherLoading by remember { mutableStateOf(false) }
-
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isWeatherLoading = true
-                                weatherMessage = "Fetching current weather..."
-                                
-                                // Try to get location
-                                val loc = locationService.getCurrentLocation()
-                                if (loc != null) {
-                                    val result = viewModel.fetchWeather(loc.latitude, loc.longitude)
-                                    if (result.isSuccess) {
-                                        val data = result.getOrNull()!!
-                                        fetchedWeatherData = data
-                                        
-                                        // Overwrite manual fields
-                                        airTemp = data.airTempF?.let { "%.1f".format(it) } ?: airTemp
-                                        
-                                        // Map sky condition
-                                        val summary = data.weatherSummary
-                                        if (skyOptions.contains(summary)) {
-                                            skyCondition = summary
-                                        } else if (summary.contains("Cloudy")) {
-                                            skyCondition = "Cloudy"
-                                        } else if (summary.contains("Rain") || summary.contains("Showers")) {
-                                            skyCondition = "Rain"
-                                        } else if (summary.contains("Storm")) {
-                                            skyCondition = "Storms"
-                                        } else {
-                                            skyCondition = "Other"
-                                        }
-
-                                        // Map wind condition
-                                        val windDesc = viewModel.mapWindSpeedToCondition(data.windSpeedMph)
-                                        if (windOptions.contains(windDesc)) {
-                                            windCondition = windDesc
-                                        }
-
-                                        // Map pressure trend
-                                        data.pressureTrend?.let {
-                                            if (pressureOptions.contains(it)) {
-                                                pressureTrend = it
-                                            }
-                                        }
-
-                                        weatherMessage = "Weather filled."
-                                    } else {
-                                        weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
-                                    }
-                                } else {
-                                    weatherMessage = "Enable GPS and wait for location to auto-fill weather."
-                                }
-                                isWeatherLoading = false
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = !isWeatherLoading
-                    ) {
-                        if (isWeatherLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Fetching...")
-                        } else {
-                            Text("Auto-fill Weather")
-                        }
-                    }
-
-                    weatherMessage?.let {
-                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    }
-                    
-                    Text(
-                        "Auto-fill uses your current location to fetch current conditions.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
             }

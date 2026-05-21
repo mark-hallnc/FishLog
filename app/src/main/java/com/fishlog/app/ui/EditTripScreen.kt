@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -136,6 +137,7 @@ fun EditTripScreen(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 1. Trip Info
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -143,6 +145,7 @@ fun EditTripScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Trip Info", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -156,60 +159,10 @@ fun EditTripScreen(
                         existingWaterBodies = existingWaterBodies,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DropdownFilter(
-                            label = "Sky",
-                            selectedOption = skyCondition.ifBlank { "Select Sky" },
-                            options = skyOptions,
-                            onOptionSelected = { skyCondition = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                        DropdownFilter(
-                            label = "Wind",
-                            selectedOption = windCondition.ifBlank { "Select Wind" },
-                            options = windOptions,
-                            onOptionSelected = { windCondition = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = airTemp,
-                            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) airTemp = it },
-                            label = { Text("Air Temp (°F)") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-                        )
-                        DropdownFilter(
-                            label = "Pressure Trend",
-                            selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
-                            options = pressureOptions,
-                            onOptionSelected = { pressureTrend = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    DropdownFilter(
-                        label = "Water Clarity",
-                        selectedOption = waterClarity.ifBlank { "Select Clarity" },
-                        options = clarityOptions,
-                        onOptionSelected = { waterClarity = it },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Notes") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        shape = RoundedCornerShape(12.dp)
-                    )
                 }
             }
 
+            // 2. Weather
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -217,52 +170,8 @@ fun EditTripScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Conditions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Weather", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DropdownFilter(
-                            label = "Sky",
-                            selectedOption = skyCondition.ifBlank { "Select Sky" },
-                            options = skyOptions,
-                            onOptionSelected = { skyCondition = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                        DropdownFilter(
-                            label = "Wind",
-                            selectedOption = windCondition.ifBlank { "Select Wind" },
-                            options = windOptions,
-                            onOptionSelected = { windCondition = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = airTemp,
-                            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) airTemp = it },
-                            label = { Text("Air Temp (°F)") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-                        )
-                        DropdownFilter(
-                            label = "Clarity",
-                            selectedOption = waterClarity.ifBlank { "Select Clarity" },
-                            options = clarityOptions,
-                            onOptionSelected = { waterClarity = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    DropdownFilter(
-                        label = "Pressure Trend",
-                        selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
-                        options = pressureOptions,
-                        onOptionSelected = { pressureTrend = it },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
                     var weatherMessage by remember { mutableStateOf<String?>(null) }
                     var isWeatherLoading by remember { mutableStateOf(false) }
 
@@ -336,6 +245,8 @@ fun EditTripScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Fetching...")
                         } else {
+                            Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("Auto-fill Weather")
                         }
                     }
@@ -343,6 +254,83 @@ fun EditTripScreen(
                     weatherMessage?.let {
                         Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DropdownFilter(
+                            label = "Sky",
+                            selectedOption = skyCondition.ifBlank { "Select Sky" },
+                            options = skyOptions,
+                            onOptionSelected = { skyCondition = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DropdownFilter(
+                            label = "Wind",
+                            selectedOption = windCondition.ifBlank { "Select Wind" },
+                            options = windOptions,
+                            onOptionSelected = { windCondition = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = airTemp,
+                            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) airTemp = it },
+                            label = { Text("Air Temp (°F)") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        )
+                        DropdownFilter(
+                            label = "Pressure Trend",
+                            selectedOption = pressureTrend.ifBlank { "Select Pressure Trend" },
+                            options = pressureOptions,
+                            onOptionSelected = { pressureTrend = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // 3. Water Conditions
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Water Conditions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    
+                    DropdownFilter(
+                        label = "Water Clarity",
+                        selectedOption = waterClarity.ifBlank { "Select Clarity" },
+                        options = clarityOptions,
+                        onOptionSelected = { waterClarity = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            // 4. Notes
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("Notes") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp)
+                    )
                 }
             }
 
