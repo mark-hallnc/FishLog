@@ -60,28 +60,43 @@ fun MapLocationPickerScreen(
 
     LaunchedEffect(Unit) {
         if (!initialCenterApplied) {
+            initialCenterApplied = true
+            
+            val targetLat: Double
+            val targetLon: Double
+            val targetZoom: Double
+            
             if (initialLat != null && initialLon != null) {
-                mapView.controller.setCenter(GeoPoint(initialLat, initialLon))
-                mapView.controller.setZoom(initialZoom)
+                targetLat = initialLat
+                targetLon = initialLon
+                targetZoom = initialZoom
             } else {
                 val location = locationService.getCurrentLocation()
                 if (location != null) {
-                    mapView.controller.setCenter(GeoPoint(location.latitude, location.longitude))
-                    mapView.controller.setZoom(15.0)
+                    targetLat = location.latitude
+                    targetLon = location.longitude
+                    targetZoom = 15.0
                 } else {
                     // Fallback: most recent log
                     val mostRecent = catches.filter { it.latitude != null }.maxByOrNull { it.timestamp }
                     if (mostRecent != null) {
-                        mapView.controller.setCenter(GeoPoint(mostRecent.latitude!!, mostRecent.longitude!!))
-                        mapView.controller.setZoom(13.0)
+                        targetLat = mostRecent.latitude!!
+                        targetLon = mostRecent.longitude!!
+                        targetZoom = 13.0
                     } else {
                         // High Point, NC
-                        mapView.controller.setCenter(GeoPoint(35.9557, -80.0053))
-                        mapView.controller.setZoom(12.0)
+                        targetLat = 35.9557
+                        targetLon = -80.0053
+                        targetZoom = 12.0
                     }
                 }
             }
-            initialCenterApplied = true
+            
+            mapView.post {
+                mapView.controller.setZoom(targetZoom)
+                mapView.controller.setCenter(GeoPoint(targetLat, targetLon))
+                mapView.invalidate()
+            }
         }
     }
 

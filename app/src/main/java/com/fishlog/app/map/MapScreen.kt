@@ -202,9 +202,12 @@ fun MapScreen(
         if (!initialCenterApplied) {
             if (initialReturnState != null) {
                 // Priority 1: Returning from a detail screen
-                mapView.controller.setCenter(GeoPoint(initialReturnState.centerLat, initialReturnState.centerLon))
-                mapView.controller.setZoom(initialReturnState.zoom)
                 initialCenterApplied = true
+                mapView.post {
+                    mapView.controller.setZoom(initialReturnState.zoom)
+                    mapView.controller.setCenter(GeoPoint(initialReturnState.centerLat, initialReturnState.centerLon))
+                    mapView.invalidate()
+                }
             } else if (focusLog != null && focusLog.latitude != null && focusLog.longitude != null) {
                 // Priority 2: Focused log (e.g. from history "View on Map")
                 // Mark as handled immediately to avoid any race conditions
@@ -218,9 +221,12 @@ fun MapScreen(
                 }
             } else if (mapCenterMode == AppPreferences.MAP_CENTER_SAVED && mapDefaultLat != null && mapDefaultLon != null) {
                 // Priority 3: Saved default location
-                mapView.controller.setCenter(GeoPoint(mapDefaultLat, mapDefaultLon))
-                mapView.controller.setZoom(mapDefaultZoom)
                 initialCenterApplied = true
+                mapView.post {
+                    mapView.controller.setZoom(mapDefaultZoom)
+                    mapView.controller.setCenter(GeoPoint(mapDefaultLat, mapDefaultLon))
+                    mapView.invalidate()
+                }
             } else {
                 // Priority 4/5: Current location or fallback
                 centerOnUser()
