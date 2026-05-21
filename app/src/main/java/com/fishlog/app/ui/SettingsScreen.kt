@@ -786,7 +786,7 @@ fun SettingsScreen(
             // Developer Tools
             SettingsSection(title = "Developer Tools") {
                 Text(
-                    text = "For testing only. Adds sample trips, catches, and no-catch logs.",
+                    text = "Adds about 100 realistic test logs across 30+ trips for analytics testing. All dates are before today.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -801,7 +801,7 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Add Sample Data")
+                        Text("Seed Rich Sample Data", fontSize = 12.sp)
                     }
                     OutlinedButton(
                         onClick = {
@@ -813,7 +813,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Remove Sample Data")
+                        Text("Clear Sample Data", fontSize = 12.sp)
                     }
                 }
             }
