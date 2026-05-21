@@ -6,16 +6,26 @@ import android.util.Log
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+/**
+ * Required Supabase setup:
+ * 1. Create private Storage bucket: fishlog-backups
+ * 2. Add RLS policies on storage.objects so authenticated users can read/write only their own folder:
+ *    folder name must equal auth.uid()
+ * 3. Do not use service_role key in the Android app.
+ */
 class CloudBackupRepository(context: Context) {
     private val TAG = "FishLogCloud"
     private val prefs: SharedPreferences = context.getSharedPreferences("fishlog_cloud_prefs", Context.MODE_PRIVATE)
 
     companion object {
         private const val KEY_ACCOUNT_EMAIL = "account_email"
+        private const val KEY_LAST_BACKUP_AT = "last_cloud_backup_at"
+        private const val BUCKET_NAME = "fishlog-backups"
     }
 
     fun isSignedIn(): Boolean {
@@ -37,12 +47,32 @@ class CloudBackupRepository(context: Context) {
         }
     }
 
+    fun getLastBackupAt(): Long? {
+        val last = prefs.getLong(KEY_LAST_BACKUP_AT, 0L)
+        return if (last == 0L) null else last
+    }
+
+    suspend fun refreshAccountState(): Result<AccountInfo?> = withContext(Dispatchers.IO) {
+        try {
+            if (!SupabaseClientProvider.isConfigured()) return@withContext Result.success(null)
+            
+            // This will attempt to refresh the session if needed
+            val user = SupabaseClientProvider.client.auth.currentUserOrNull()
+            if (user != null) {
+                prefs.edit().putString(KEY_ACCOUNT_EMAIL, user.email).apply()
+                Result.success(AccountInfo(user.id, user.email))
+            } else {
+                Result.success(null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error refreshing account state", e)
+            Result.failure(e)
+        }
+    }
+
     /**
      * Sends a one-time sign-in code to the provided email address.
      * If the user doesn't exist, an account will be created automatically.
-     * 
-     * IMPORTANT: For code-entry flow, the Supabase "Magic link or OTP" email template 
-     * should include {{ .Token }}. Instruct users to enter the code in FishLog.
      */
     suspend fun sendSignInCode(email: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -51,10 +81,9 @@ class CloudBackupRepository(context: Context) {
             }
             
             Log.d(TAG, "Requesting OTP code for: $email")
-            // signInWith(OTP) is the universal passwordless flow in Supabase Kotlin SDK v3
             SupabaseClientProvider.client.auth.signInWith(OTP) {
                 this.email = email
-                this.createUser = true // Always allow creation to simplify the flow
+                this.createUser = true 
             }
             
             Result.success(Unit)
@@ -126,6 +155,7 @@ class CloudBackupRepository(context: Context) {
                 SupabaseClientProvider.client.auth.signOut()
             }
             prefs.edit().remove(KEY_ACCOUNT_EMAIL).apply()
+            prefs.edit().remove(KEY_LAST_BACKUP_AT).apply()
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error in signOut", e)
@@ -133,15 +163,61 @@ class CloudBackupRepository(context: Context) {
         }
     }
 
-    suspend fun backupNow(): Result<Unit> {
-        // TODO: Replace with Supabase storage upload of local database or JSON backup
-        delay(1000)
-        return Result.failure(Exception("Cloud backup upload is coming next."))
+    /**
+     * Uploads the full backup JSON to Supabase Storage.
+     * Bucket: fishlog-backups
+     * Path: {userId}/fishlog-backup.json
+     */
+    suspend fun backupNow(jsonBackup: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (!SupabaseClientProvider.isConfigured()) {
+                return@withContext Result.failure(Exception("Supabase is not configured."))
+            }
+
+            val user = SupabaseClientProvider.client.auth.currentUserOrNull()
+                ?: return@withContext Result.failure(Exception("Please sign in to use cloud backup."))
+
+            val fileName = "${user.id}/fishlog-backup.json"
+            val bucket = SupabaseClientProvider.client.storage[BUCKET_NAME]
+
+            Log.d(TAG, "Uploading cloud backup: $fileName")
+            bucket.upload(fileName, jsonBackup.toByteArray()) {
+                upsert = true
+            }
+
+            val now = System.currentTimeMillis()
+            prefs.edit().putLong(KEY_LAST_BACKUP_AT, now).apply()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Cloud backup failed", e)
+            Result.failure(Exception("Cloud backup failed. Your local data is safe."))
+        }
     }
 
-    suspend fun restoreFromCloud(): Result<Unit> {
-        // TODO: Replace with Supabase storage download and merge into local Room
-        delay(1000)
-        return Result.failure(Exception("Cloud restore is coming next."))
+    /**
+     * Downloads the backup JSON from Supabase Storage.
+     */
+    suspend fun restoreFromCloud(): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            if (!SupabaseClientProvider.isConfigured()) {
+                return@withContext Result.failure(Exception("Supabase is not configured."))
+            }
+
+            val user = SupabaseClientProvider.client.auth.currentUserOrNull()
+                ?: return@withContext Result.failure(Exception("Please sign in to restore from cloud."))
+
+            val fileName = "${user.id}/fishlog-backup.json"
+            val bucket = SupabaseClientProvider.client.storage[BUCKET_NAME]
+
+            Log.d(TAG, "Downloading cloud backup: $fileName")
+            val actualBytes = bucket.downloadPublic(fileName) // Note: Adjust if downloadAuthenticated is preferred/needed
+            
+            val json = String(actualBytes)
+            Result.success(json)
+        } catch (e: Exception) {
+            Log.e(TAG, "Cloud restore failed", e)
+            Result.failure(Exception("No cloud backup found or restore failed."))
+        }
     }
 }

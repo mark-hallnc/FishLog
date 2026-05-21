@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import java.io.BufferedWriter
 import java.io.OutputStream
 import java.io.OutputStreamWriter
+import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +60,28 @@ fun SettingsScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+
+    if (showRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRestoreConfirm = false },
+            title = { Text("Restore from Cloud?") },
+            text = { Text("This will restore your FishLog data from your cloud backup. Your current local data will be merged with the cloud data. Consider exporting a local backup first.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRestoreConfirm = false
+                    viewModel.restoreFromCloud()
+                }) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     val csvExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
@@ -622,18 +645,43 @@ fun SettingsScreen(
                                 }
                             }
                         } else {
-                            Text(
-                                text = "Signed in as:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                            Text(
-                                text = viewModel.accountEmail ?: "Unknown",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Signed in as:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                    Text(
+                                        text = viewModel.accountEmail ?: "Unknown",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                TextButton(onClick = { viewModel.signOut() }) {
+                                    Text("Sign Out", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            viewModel.lastCloudBackupAt?.let { lastAt ->
+                                val dateStr = SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(lastAt))
+                                Text(
+                                    text = "Last cloud backup: $dateStr",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            } ?: run {
+                                Text(
+                                    text = "No cloud backup yet.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                                       viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
@@ -658,7 +706,7 @@ fun SettingsScreen(
                                     }
                                 }
                                 OutlinedButton(
-                                    onClick = { viewModel.restoreFromCloud() },
+                                    onClick = { showRestoreConfirm = true },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp),
                                     enabled = !isOperationInProgress
@@ -672,16 +720,13 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            TextButton(
-                                onClick = { viewModel.signOut() },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !isOperationInProgress
-                            ) {
-                                Text("Sign Out", color = MaterialTheme.colorScheme.error)
-                            }
+                            
+                            Text(
+                                text = "Cloud backup protects log and trip data. Photo file backup will be added later.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
                         }
                     }
                 }

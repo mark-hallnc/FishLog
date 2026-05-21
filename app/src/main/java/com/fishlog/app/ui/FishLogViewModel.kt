@@ -36,6 +36,9 @@ class FishLogViewModel(
     var pendingAuthEmail by mutableStateOf<String?>(null)
         private set
 
+    var lastCloudBackupAt by mutableStateOf(cloudBackupRepository.getLastBackupAt())
+        private set
+
     // Active Trip Forecast State (In-memory only)
     var activeTripForecast by mutableStateOf<DailyForecastData?>(null)
         private set
@@ -63,6 +66,15 @@ class FishLogViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    init {
+        viewModelScope.launch {
+            cloudBackupRepository.refreshAccountState()
+            accountStatus = if (cloudBackupRepository.isSignedIn()) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT
+            accountEmail = cloudBackupRepository.getCurrentAccountEmail()
+            lastCloudBackupAt = cloudBackupRepository.getLastBackupAt()
+        }
+    }
 
     fun sendSignInCode(email: String) {
         viewModelScope.launch {
@@ -125,14 +137,27 @@ class FishLogViewModel(
     fun backupNow() {
         viewModelScope.launch {
             backupUiState = BackupUiState.BACKUP_IN_PROGRESS
-            backupStatusMessage = "Backing up..."
-            val result = cloudBackupRepository.backupNow()
-            if (result.isSuccess) {
-                backupUiState = BackupUiState.SUCCESS
-                backupStatusMessage = "Backup completed (Placeholder)"
-            } else {
+            backupStatusMessage = "Creating backup..."
+            
+            try {
+                val catches = allCatches.value
+                val trips = allTrips.value
+                val json = JsonBackupHelper.createBackup(catches, trips)
+                
+                backupStatusMessage = "Uploading to cloud..."
+                val result = cloudBackupRepository.backupNow(json)
+                
+                if (result.isSuccess) {
+                    backupUiState = BackupUiState.SUCCESS
+                    backupStatusMessage = "Cloud backup complete."
+                    lastCloudBackupAt = cloudBackupRepository.getLastBackupAt()
+                } else {
+                    backupUiState = BackupUiState.ERROR
+                    backupStatusMessage = result.exceptionOrNull()?.message ?: "Backup failed"
+                }
+            } catch (e: Exception) {
                 backupUiState = BackupUiState.ERROR
-                backupStatusMessage = "Backup failed"
+                backupStatusMessage = "Could not generate backup file."
             }
         }
     }
@@ -140,14 +165,23 @@ class FishLogViewModel(
     fun restoreFromCloud() {
         viewModelScope.launch {
             backupUiState = BackupUiState.RESTORE_IN_PROGRESS
-            backupStatusMessage = "Restoring..."
+            backupStatusMessage = "Downloading from cloud..."
+            
             val result = cloudBackupRepository.restoreFromCloud()
             if (result.isSuccess) {
-                backupUiState = BackupUiState.SUCCESS
-                backupStatusMessage = "Restore placeholder completed. Supabase integration coming next."
+                try {
+                    val json = result.getOrNull()!!
+                    val backup = JsonBackupHelper.parseBackup(json)
+                    importBackup(backup) // Reuse existing import logic
+                    backupUiState = BackupUiState.SUCCESS
+                    backupStatusMessage = "Cloud restore complete. Data merged."
+                } catch (e: Exception) {
+                    backupUiState = BackupUiState.ERROR
+                    backupStatusMessage = "Downloaded backup is invalid or corrupt."
+                }
             } else {
                 backupUiState = BackupUiState.ERROR
-                backupStatusMessage = "Restore failed"
+                backupStatusMessage = result.exceptionOrNull()?.message ?: "Restore failed"
             }
         }
     }

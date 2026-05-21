@@ -15,3 +15,8 @@ enum class BackupUiState {
     SUCCESS,
     ERROR
 }
+
+data class AccountInfo(
+    val userId: String,
+    val email: String?
+)

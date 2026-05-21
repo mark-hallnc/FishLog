@@ -13,7 +13,10 @@ object SupabaseClientProvider {
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY
         ) {
-            install(Auth)
+            install(Auth) {
+                // TODO: For production, use an encrypted session manager if possible.
+                // For now, the default storage is sufficient for MVP v1.
+            }
             install(Postgrest)
             install(Storage)
         }
