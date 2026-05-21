@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.WeatherData
 import com.fishlog.app.location.LocationService
+import com.fishlog.app.util.WaterBodyNameUtils
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
@@ -29,13 +30,14 @@ fun EditTripScreen(
 ) {
     val allTrips by viewModel.allTrips.collectAsState()
     val existingWaterBodies = remember(allTrips) {
-        allTrips.map { it.waterBody }.distinct()
+        WaterBodyNameUtils.getUniqueWaterBodies(allTrips)
     }
     
     var name by remember { mutableStateOf(trip.name) }
     var waterBody by remember { mutableStateOf(trip.waterBody) }
     var notes by remember { mutableStateOf(trip.notes) }
     var isSaving by remember { mutableStateOf(false) }
+    var showBulkUpdateDialog by remember { mutableStateOf(false) }
     var fetchedWeatherData by remember { mutableStateOf<WeatherData?>(null) }
 
     var skyCondition by remember { mutableStateOf(trip.skyCondition) }
@@ -52,6 +54,60 @@ fun EditTripScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val locationService = remember { LocationService(context) }
+
+    fun performSave(bulkUpdate: Boolean = false) {
+        if (isSaving) return
+        isSaving = true
+        scope.launch {
+            try {
+                val updatedTrip = trip.copy(
+                    name = name,
+                    waterBody = waterBody,
+                    notes = notes,
+                    skyCondition = skyCondition,
+                    windCondition = windCondition,
+                    airTempF = airTemp.toDoubleOrNull(),
+                    waterClarity = waterClarity,
+                    pressureTrend = pressureTrend,
+                    updatedAt = System.currentTimeMillis(),
+                    backupStatus = com.fishlog.app.data.BackupStatus.PENDING_BACKUP
+                )
+                viewModel.updateTrip(updatedTrip, fetchedWeatherData)
+                
+                if (bulkUpdate && trip.waterBody.isNotBlank()) {
+                    viewModel.updateTripWaterBodyForMatchingOldName(trip.waterBody, waterBody)
+                }
+                
+                onSave(updatedTrip)
+            } finally {
+                isSaving = false
+            }
+        }
+    }
+
+    if (showBulkUpdateDialog) {
+        AlertDialog(
+            onDismissRequest = { showBulkUpdateDialog = false },
+            title = { Text("Update similar trips?") },
+            text = { Text("You changed this trip's water body from '${trip.waterBody}' to '$waterBody'. Do you want to update other trips with the same old water body name too?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBulkUpdateDialog = false
+                    performSave(bulkUpdate = true)
+                }) {
+                    Text("Update all matching trips")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showBulkUpdateDialog = false
+                    performSave(bulkUpdate = false)
+                }) {
+                    Text("This trip only")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -243,26 +299,22 @@ fun EditTripScreen(
             Button(
                 onClick = {
                     if (isSaving) return@Button
-                    isSaving = true
-                    scope.launch {
-                        try {
-                            val updatedTrip = trip.copy(
-                                name = name,
-                                waterBody = waterBody,
-                                notes = notes,
-                                skyCondition = skyCondition,
-                                windCondition = windCondition,
-                                airTempF = airTemp.toDoubleOrNull(),
-                                waterClarity = waterClarity,
-                                pressureTrend = pressureTrend,
-                                updatedAt = System.currentTimeMillis(),
-                                backupStatus = com.fishlog.app.data.BackupStatus.PENDING_BACKUP
-                            )
-                            viewModel.updateTrip(updatedTrip, fetchedWeatherData)
-                            onSave(updatedTrip)
-                        } finally {
-                            isSaving = false
+                    
+                    val nameChanged = waterBody.trim() != trip.waterBody.trim()
+                    val normalizedSame = WaterBodyNameUtils.normalize(waterBody) == WaterBodyNameUtils.normalize(trip.waterBody)
+                    
+                    if (nameChanged && !normalizedSame && trip.waterBody.isNotBlank()) {
+                        // Check if other trips exist with the old name
+                        val hasOthers = allTrips.any { 
+                            it.id != trip.id && WaterBodyNameUtils.normalize(it.waterBody) == WaterBodyNameUtils.normalize(trip.waterBody) 
                         }
+                        if (hasOthers) {
+                            showBulkUpdateDialog = true
+                        } else {
+                            performSave(bulkUpdate = false)
+                        }
+                    } else {
+                        performSave(bulkUpdate = false)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),

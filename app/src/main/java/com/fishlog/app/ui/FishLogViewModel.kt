@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fishlog.app.data.*
+import com.fishlog.app.util.WaterBodyNameUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -311,6 +312,25 @@ class FishLogViewModel(
         viewModelScope.launch {
             catchLogDao.clearTripIdForLogs(trip.id)
             fishingTripDao.deleteTrip(trip)
+        }
+    }
+
+    fun updateTripWaterBodyForMatchingOldName(oldName: String, newName: String) {
+        viewModelScope.launch {
+            val normOld = WaterBodyNameUtils.normalize(oldName)
+            if (normOld.isBlank()) return@launch
+
+            val trips = allTrips.value
+            trips.filter { WaterBodyNameUtils.normalize(it.waterBody) == normOld }
+                .forEach { trip ->
+                    if (trip.waterBody != newName) {
+                        fishingTripDao.updateTrip(trip.copy(
+                            waterBody = newName,
+                            updatedAt = System.currentTimeMillis(),
+                            backupStatus = BackupStatus.PENDING_BACKUP
+                        ))
+                    }
+                }
         }
     }
 

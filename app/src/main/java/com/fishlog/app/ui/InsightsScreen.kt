@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.*
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.DateFilterControls
+import com.fishlog.app.util.WaterBodyNameUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -136,6 +137,7 @@ fun InsightsScreen(
                         Text("No logs match this date range.", color = MaterialTheme.colorScheme.secondary)
                     }
                 } else {
+                    WaterBodyCleanupHint(trips)
                     SummarySection(filteredLogs)
                     DataCoverageSection(filteredTrips)
                     BestWaterBodiesSection(filteredLogs, trips)
@@ -152,6 +154,48 @@ fun InsightsScreen(
                     TripInsightsSection(filteredLogs, filteredTrips)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun WaterBodyCleanupHint(allTrips: List<FishingTrip>) {
+    val duplicates = remember(allTrips) {
+        val names = allTrips.map { it.waterBody.trim() }.filter { it.isNotBlank() }.distinct()
+        val groups = names.groupBy { WaterBodyNameUtils.normalize(it) }
+        groups.filter { it.value.size > 1 }
+            .map { it.value.sortedByDescending { name -> allTrips.count { it.waterBody == name } } }
+            .take(3)
+    }
+
+    if (duplicates.isNotEmpty()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Analytics, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Water Body Cleanup", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Possible duplicate water body names found. You can clean these up by editing trips to use the same name.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                duplicates.forEach { group ->
+                    Text(
+                        text = group.joinToString(" / "),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
             }
         }
     }
@@ -198,13 +242,19 @@ fun BestWaterBodiesSection(logs: List<CatchLog>, allTrips: List<FishingTrip>) {
         logs.filter { it.tripId != null }
             .groupBy { log ->
                 val trip = allTrips.find { it.id == log.tripId }
-                trip?.waterBody?.let { InsightsCalculator.normalizeWaterBody(it) } ?: ""
+                trip?.waterBody?.let { WaterBodyNameUtils.normalize(it) } ?: ""
             }
             .filter { it.key.isNotBlank() }
-            .map { (waterBody, logList) ->
+            .map { (normName, logList) ->
                 val catches = logList.count { it.logType == "CATCH" }
                 val noCatches = logList.count { it.logType == "NO_CATCH" }
-                Triple(waterBody, catches, noCatches)
+                
+                // Find the most frequent original name for display
+                val displayName = logList.mapNotNull { log ->
+                    allTrips.find { it.id == log.tripId }?.waterBody
+                }.groupingBy { it }.eachCount().maxBy { it.value }.key
+                
+                Triple(displayName, catches, noCatches)
             }
             .sortedByDescending { it.second }
             .take(5)
@@ -241,16 +291,23 @@ fun BestSpeciesByWaterBodySection(logs: List<CatchLog>, allTrips: List<FishingTr
         logs.filter { it.logType == "CATCH" && it.tripId != null }
             .groupBy { log ->
                 val trip = allTrips.find { it.id == log.tripId }
-                trip?.waterBody?.let { InsightsCalculator.normalizeWaterBody(it) } ?: ""
+                trip?.waterBody?.let { WaterBodyNameUtils.normalize(it) } ?: ""
             }
             .filter { it.key.isNotBlank() }
-            .mapValues { (_, logList) ->
-                logList.groupBy { it.species }
+            .mapValues { (normName, logList) ->
+                val topSpecies = logList.groupBy { it.species }
                     .maxByOrNull { it.value.size }
                     ?.let { it.key to it.value.size }
+                
+                // Find the most frequent original name for display
+                val displayName = logList.mapNotNull { log ->
+                    allTrips.find { it.id == log.tripId }?.waterBody
+                }.groupingBy { it }.eachCount().maxBy { it.value }.key
+                
+                displayName to topSpecies
             }
-            .mapNotNull { if (it.value != null) it.key to it.value!! else null }
-            .sortedByDescending { it.second.second }
+            .map { it.value }
+            .sortedByDescending { it.second?.second ?: 0 }
             .take(5)
     }
 
@@ -262,14 +319,16 @@ fun BestSpeciesByWaterBodySection(logs: List<CatchLog>, allTrips: List<FishingTr
             Text("Not enough species and water body data yet.", style = MaterialTheme.typography.bodySmall)
         } else {
             data.forEach { (waterBody, topSpeciesData) ->
-                val (species, count) = topSpeciesData
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    Text(waterBody, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                    Text(
-                        "Top species: $species — $count catches",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                if (topSpeciesData != null) {
+                    val (species, count) = topSpeciesData
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text(waterBody, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Top species: $species — $count catches",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
                 }
             }
         }

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.location.LocationService
 import com.fishlog.app.data.WeatherData
+import com.fishlog.app.util.WaterBodyNameUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,7 +34,7 @@ fun StartTripScreen(
 ) {
     val allTrips by viewModel.allTrips.collectAsState()
     val existingWaterBodies = remember(allTrips) {
-        allTrips.map { it.waterBody }.distinct()
+        WaterBodyNameUtils.getUniqueWaterBodies(allTrips)
     }
     
     var name by remember { mutableStateOf("") }
