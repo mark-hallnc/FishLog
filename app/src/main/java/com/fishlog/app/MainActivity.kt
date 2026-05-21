@@ -47,12 +47,14 @@ import com.fishlog.app.ui.TripSummaryScreen
 import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.SettingsScreen
 import com.fishlog.app.ui.AdvancedAnalyticsScreen
+import com.fishlog.app.ui.PatternDetailScreen
 import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.analytics.PatternInsight
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.LogTypeFilter
 import com.fishlog.app.ui.MapReturnState
@@ -169,6 +171,7 @@ fun MainScreen(
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
     var selectedPhotoUri by remember { mutableStateOf<String?>(null) }
     var savedMapReturnState by remember { mutableStateOf<MapReturnState?>(null) }
+    var selectedPatternInsight by remember { mutableStateOf<PatternInsight?>(null) }
 
     // Map filters state to persist across detail views
     var mapSelectedSpecies by remember { mutableStateOf("All Species") }
@@ -388,8 +391,33 @@ fun MainScreen(
             )
             "AdvancedAnalytics" -> AdvancedAnalyticsScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = "Home" }
+                onBack = { currentScreen = "Home" },
+                onInsightClick = { insight ->
+                    selectedPatternInsight = insight
+                    previousScreen = "AdvancedAnalytics"
+                    currentScreen = "PatternDetail"
+                }
             )
+            "PatternDetail" -> selectedPatternInsight?.let { insight ->
+                val catches by viewModel.allCatches.collectAsState()
+                val trips by viewModel.allTrips.collectAsState()
+                PatternDetailScreen(
+                    insight = insight,
+                    allLogs = catches,
+                    allTrips = trips,
+                    onBack = { currentScreen = "AdvancedAnalytics" },
+                    onLogClick = { log ->
+                        selectedCatch = log
+                        previousScreen = "PatternDetail"
+                        currentScreen = "Detail"
+                    },
+                    onTripClick = { trip ->
+                        selectedTrip = trip
+                        previousTripScreen = "PatternDetail"
+                        currentScreen = "TripDetail"
+                    }
+                )
+            } ?: run { currentScreen = "AdvancedAnalytics" }
             "TripHistory" -> TripHistoryScreen(
                 viewModel = viewModel,
                 onBack = { currentScreen = "Home" },

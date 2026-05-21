@@ -62,7 +62,8 @@ object PatternEngine {
                     title = bait,
                     subtitle = if (species.isNotBlank() && species != "No Catch") species else "General",
                     category = "Bait",
-                    group = group
+                    group = group,
+                    type = PatternType.BAIT_BY_SPECIES
                 )
             }
             .filter { it.observationCount >= 2 }
@@ -82,7 +83,7 @@ object PatternEngine {
                 else -> "26+ ft"
             }
         }.map { (range, group) ->
-            createInsight(range, "Depth", "Depth", group.map { it.first })
+            createInsight(range, "Depth", "Depth", group.map { it.first }, PatternType.DEPTH_RANGE)
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
@@ -99,7 +100,7 @@ object PatternEngine {
                 else -> "85°F+"
             }
         }.map { (range, group) ->
-            createInsight(range, "Water Temp", "Temp", group.map { it.first })
+            createInsight(range, "Water Temp", "Temp", group.map { it.first }, PatternType.WATER_TEMP_RANGE)
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
@@ -114,7 +115,7 @@ object PatternEngine {
                 else -> "Night (9P-5A)"
             }
         }.map { (time, group) ->
-            createInsight(time, "Time of Day", "Time", group)
+            createInsight(time, "Time of Day", "Time", group, PatternType.TIME_OF_DAY)
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
@@ -125,7 +126,7 @@ object PatternEngine {
             if (!wb.isNullOrBlank()) log to wb else null
         }.groupBy { it.second }
         .map { (wb, group) ->
-            createInsight(wb, "Water Body", "Location", group.map { it.first })
+            createInsight(wb, "Water Body", "Location", group.map { it.first }, PatternType.WATER_BODY)
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
@@ -136,7 +137,7 @@ object PatternEngine {
             if (!moon.isNullOrBlank()) log to moon else null
         }.groupBy { it.second }
         .map { (moon, group) ->
-            createInsight(moon, "Moon Phase", "Moon", group.map { it.first })
+            createInsight(moon, "Moon Phase", "Moon", group.map { it.first }, PatternType.MOON_PHASE)
         }.sortedWith(compareByDescending<PatternInsight> { it.catchRate }.thenByDescending { it.catchCount })
         .take(5)
 
@@ -159,7 +160,13 @@ object PatternEngine {
         )
     }
 
-    private fun createInsight(title: String, subtitle: String, category: String, group: List<CatchLog>): PatternInsight {
+    private fun createInsight(
+        title: String, 
+        subtitle: String, 
+        category: String, 
+        group: List<CatchLog>,
+        type: PatternType
+    ): PatternInsight {
         val catches = group.count { it.logType == "CATCH" }
         val noCatches = group.count { it.logType == "NO_CATCH" }
         val total = catches + noCatches
@@ -180,7 +187,9 @@ object PatternEngine {
             noCatchCount = noCatches,
             observationCount = total,
             catchRate = rate,
-            confidenceLabel = confidence
+            confidenceLabel = confidence,
+            matchingLogIds = group.map { it.id },
+            patternType = type
         )
     }
 }

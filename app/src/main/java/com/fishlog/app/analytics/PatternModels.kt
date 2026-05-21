@@ -23,8 +23,20 @@ data class PatternInsight(
     val noCatchCount: Int,
     val observationCount: Int,
     val catchRate: Double,
-    val confidenceLabel: String
+    val confidenceLabel: String,
+    val matchingLogIds: List<Long> = emptyList(),
+    val patternType: PatternType
 )
+
+enum class PatternType {
+    BAIT_BY_SPECIES,
+    DEPTH_RANGE,
+    WATER_TEMP_RANGE,
+    TIME_OF_DAY,
+    WATER_BODY,
+    MOON_PHASE,
+    TOP_PATTERN
+}
 
 data class PatternEngineFilters(
     val species: String? = null,

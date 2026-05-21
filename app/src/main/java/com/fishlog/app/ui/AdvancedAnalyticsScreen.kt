@@ -1,6 +1,7 @@
 package com.fishlog.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +31,8 @@ import java.util.*
 @Composable
 fun AdvancedAnalyticsScreen(
     viewModel: FishLogViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onInsightClick: (PatternInsight) -> Unit
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
@@ -117,7 +119,12 @@ fun AdvancedAnalyticsScreen(
             )
 
             // Pattern Engine Section
-            PatternEngineSection(patternResult, filters, onReset = { filters = PatternEngineFilters() })
+            PatternEngineSection(
+                result = patternResult,
+                filters = filters,
+                onReset = { filters = PatternEngineFilters() },
+                onInsightClick = onInsightClick
+            )
 
             // Roadmap Section
             Text(
@@ -221,7 +228,12 @@ fun FilterCard(
 }
 
 @Composable
-fun PatternEngineSection(result: PatternEngineResult, filters: PatternEngineFilters, onReset: () -> Unit = {}) {
+fun PatternEngineSection(
+    result: PatternEngineResult,
+    filters: PatternEngineFilters,
+    onReset: () -> Unit = {},
+    onInsightClick: (PatternInsight) -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -271,7 +283,7 @@ fun PatternEngineSection(result: PatternEngineResult, filters: PatternEngineFilt
             } else if (result.totalObservations < 5) {
                 NotEnoughDataView(result)
             } else {
-                PatternResultsView(result)
+                PatternResultsView(result, onInsightClick)
             }
         }
     }
@@ -330,7 +342,7 @@ fun NotEnoughDataView(result: PatternEngineResult) {
 }
 
 @Composable
-fun PatternResultsView(result: PatternEngineResult) {
+fun PatternResultsView(result: PatternEngineResult, onInsightClick: (PatternInsight) -> Unit = {}) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Stats Overview
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -342,12 +354,20 @@ fun PatternResultsView(result: PatternEngineResult) {
         // Top Pattern Highlight
         result.topPattern?.let { top ->
             Surface(
+                onClick = { onInsightClick(top) },
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Top Active Pattern", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Top Active Pattern", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
                     Text(top.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("${top.subtitle} · ${top.confidenceLabel}", style = MaterialTheme.typography.bodySmall)
                     
@@ -369,41 +389,49 @@ fun PatternResultsView(result: PatternEngineResult) {
         }
 
         // Category Breakdowns
-        InsightList("Best Baits", result.bestBaitsBySpecies)
-        InsightList("Best Times", result.bestTimesOfDay)
-        InsightList("Best Depths", result.bestDepthRanges)
-        InsightList("Water Temp", result.bestWaterTempRanges)
-        InsightList("Water Bodies", result.bestWaterBodies)
-        InsightList("Moon Phase", result.moonPhasePatterns)
+        InsightList("Best Baits", result.bestBaitsBySpecies, onInsightClick)
+        InsightList("Best Times", result.bestTimesOfDay, onInsightClick)
+        InsightList("Best Depths", result.bestDepthRanges, onInsightClick)
+        InsightList("Water Temp", result.bestWaterTempRanges, onInsightClick)
+        InsightList("Water Bodies", result.bestWaterBodies, onInsightClick)
+        InsightList("Moon Phase", result.moonPhasePatterns, onInsightClick)
     }
 }
 
 @Composable
-fun InsightList(title: String, insights: List<PatternInsight>) {
+fun InsightList(title: String, insights: List<PatternInsight>, onInsightClick: (PatternInsight) -> Unit = {}) {
     if (insights.isEmpty()) return
     
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
         insights.forEach { insight ->
-            PatternInsightRow(insight)
+            PatternInsightRow(insight, onClick = { onInsightClick(insight) })
         }
     }
 }
 
 @Composable
-fun PatternInsightRow(insight: PatternInsight) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+fun PatternInsightRow(insight: PatternInsight, onClick: () -> Unit = {}) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(insight.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 Text(insight.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(
-                "${(insight.catchRate * 100).toInt()}%",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${(insight.catchRate * 100).toInt()}%",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outlineVariant)
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         LinearProgressIndicator(
