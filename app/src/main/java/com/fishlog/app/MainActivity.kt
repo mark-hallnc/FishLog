@@ -78,6 +78,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Main entry point for FishLog.
+ * 
+ * Run unit tests:
+ * ./gradlew testDebugUnitTest
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

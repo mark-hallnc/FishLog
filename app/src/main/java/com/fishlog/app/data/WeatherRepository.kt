@@ -5,11 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -69,32 +64,7 @@ class WeatherRepository {
             val responseCode = connection.responseCode
             if (responseCode == 200) {
                 val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
-                val root = json.parseToJsonElement(responseBody).jsonObject
-                val daily = root["daily"]?.jsonObject ?: throw Exception("Forecast response missing 'daily' object")
-
-                val code = daily["weather_code"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.intOrNull
-                val high = daily["temperature_2m_max"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
-                val low = daily["temperature_2m_min"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
-                val wind = daily["wind_speed_10m_max"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
-                val gust = daily["wind_gusts_10m_max"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
-                val dir = daily["wind_direction_10m_dominant"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull
-
-                val data = DailyForecastData(
-                    condition = mapWeatherCodeToSummary(code),
-                    weatherCode = code,
-                    highTempF = high,
-                    lowTempF = low,
-                    windSpeedMph = wind,
-                    windGustMph = gust,
-                    windDirectionDegrees = dir,
-                    fetchedAt = System.currentTimeMillis()
-                )
-
-                if (data.highTempF != null || data.lowTempF != null || data.weatherCode != null) {
-                    Result.success(data)
-                } else {
-                    Result.failure(Exception("No usable forecast fields found"))
-                }
+                WeatherParser.parseForecastJson(responseBody)
             } else {
                 Result.failure(Exception("Forecast API error: $responseCode"))
             }
@@ -132,77 +102,7 @@ class WeatherRepository {
             if (responseCode == 200) {
                 val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
                 Log.d(TAG, "Response body (first 500): ${responseBody.take(500)}")
-
-                val root = json.parseToJsonElement(responseBody).jsonObject
-                val current = root["current"]?.jsonObject ?: throw Exception("Weather response could not be read: 'current' object missing.")
-                val hourly = root["hourly"]?.jsonObject
-
-                Log.d(TAG, "'current' object found in JSON")
-
-                val code = current["weather_code"]?.jsonPrimitive?.intOrNull
-                val pressure = current["pressure_msl"]?.jsonPrimitive?.doubleOrNull 
-                    ?: current["surface_pressure"]?.jsonPrimitive?.doubleOrNull
-
-                // Calculate pressure trend
-                var trend: String? = null
-                if (hourly != null && pressure != null) {
-                    try {
-                        val times = hourly["time"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
-                        val pressures = hourly["pressure_msl"]?.jsonArray?.map { it.jsonPrimitive.doubleOrNull } ?: emptyList()
-                        
-                        val nowEpoch = System.currentTimeMillis() / 1000
-                        // Find index of current hour (approx)
-                        val currentIndex = times.indexOfFirst { timeStr ->
-                            // Open-Meteo time is ISO8601 "2026-05-20T14:00"
-                            val timeEpoch = java.time.LocalDateTime.parse(timeStr).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
-                            timeEpoch > nowEpoch - 1800 // Within 30 mins
-                        }.let { if (it == -1) pressures.size - 1 else it }
-
-                        if (currentIndex >= 3) {
-                            val prevPressure = pressures[currentIndex - 3]
-                            if (prevPressure != null) {
-                                val delta = pressure - prevPressure
-                                trend = when {
-                                    delta >= 1.0 -> "Rising"
-                                    delta <= -1.0 -> "Falling"
-                                    else -> "Steady"
-                                }
-                                Log.d(TAG, "Pressure trend calculated: current=$pressure, prev=$prevPressure, delta=$delta, trend=$trend")
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Could not calculate pressure trend", e)
-                    }
-                }
-
-                val data = WeatherData(
-                    airTempF = current["temperature_2m"]?.jsonPrimitive?.doubleOrNull,
-                    feelsLikeF = current["apparent_temperature"]?.jsonPrimitive?.doubleOrNull,
-                    humidityPercent = current["relative_humidity_2m"]?.jsonPrimitive?.doubleOrNull,
-                    windSpeedMph = current["wind_speed_10m"]?.jsonPrimitive?.doubleOrNull,
-                    windDirectionDegrees = current["wind_direction_10m"]?.jsonPrimitive?.doubleOrNull,
-                    windGustMph = current["wind_gusts_10m"]?.jsonPrimitive?.doubleOrNull,
-                    barometricPressureHpa = pressure,
-                    cloudCoverPercent = current["cloud_cover"]?.jsonPrimitive?.doubleOrNull,
-                    precipitationIn = current["precipitation"]?.jsonPrimitive?.doubleOrNull,
-                    weatherCode = code,
-                    weatherSummary = mapWeatherCodeToSummary(code),
-                    pressureTrend = trend,
-                    fetchedAt = System.currentTimeMillis(),
-                    source = "Open-Meteo"
-                )
-
-                Log.d(TAG, "Parsed WeatherData: $data")
-
-                // Success criteria: at least one useful field must be present
-                if (data.airTempF != null || data.feelsLikeF != null || data.humidityPercent != null || 
-                    data.weatherCode != null || data.windSpeedMph != null || data.barometricPressureHpa != null || 
-                    data.cloudCoverPercent != null) {
-                    Result.success(data)
-                } else {
-                    Log.w(TAG, "No usable weather fields parsed from response")
-                    Result.failure(Exception("Weather response did not include usable current conditions."))
-                }
+                WeatherParser.parseCurrentWeatherJson(responseBody)
             } else {
                 Log.e(TAG, "API error: $responseCode")
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
@@ -214,24 +114,6 @@ class WeatherRepository {
             Result.failure(Exception("Weather request failed. You can enter conditions manually."))
         } finally {
             connection?.disconnect()
-        }
-    }
-
-    /**
-     * Maps WMO weather codes used by Open-Meteo to readable summaries.
-     */
-    fun mapWeatherCodeToSummary(code: Int?): String {
-        return when (code) {
-            0 -> "Clear"
-            1, 2 -> "Partly Cloudy"
-            3 -> "Cloudy"
-            45, 48 -> "Fog"
-            51, 53, 55, 56, 57 -> "Drizzle"
-            61, 63, 65, 66, 67 -> "Rain"
-            71, 73, 75, 77 -> "Snow"
-            80, 81, 82 -> "Showers"
-            95, 96, 99 -> "Storms"
-            else -> "Unknown"
         }
     }
 
@@ -248,41 +130,4 @@ class WeatherRepository {
             else -> "Gusty"
         }
     }
-
-    /**
-     * Internal test example for verify parsing of the sample JSON provided in the bug report.
-     * 
-     * val sampleJson = """
-     * {
-     *   "latitude": 35.969963,
-     *   "longitude": -80.01754,
-     *   "current": {
-     *     "time": "2026-05-19T18:45",
-     *     "interval": 900,
-     *     "temperature_2m": 89.4,
-     *     "relative_humidity_2m": 31,
-     *     "apparent_temperature": 87.2,
-     *     "precipitation": 0.000,
-     *     "weather_code": 0,
-     *     "cloud_cover": 0,
-     *     "pressure_msl": 1018.6,
-     *     "surface_pressure": 986.4,
-     *     "wind_speed_10m": 8.8,
-     *     "wind_direction_10m": 187,
-     *     "wind_gusts_10m": 12.1
-     *   }
-     * }
-     * """
-     * 
-     * Result:
-     * airTempF: 89.4
-     * humidityPercent: 31.0
-     * weatherCode: 0
-     * weatherSummary: "Clear"
-     * cloudCoverPercent: 0.0
-     * precipitationIn: 0.0
-     * ...
-     */
 }
-
-

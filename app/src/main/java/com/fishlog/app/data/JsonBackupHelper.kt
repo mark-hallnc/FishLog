@@ -17,6 +17,7 @@ object JsonBackupHelper {
     private val json = Json {
         ignoreUnknownKeys = true
         prettyPrint = true
+        encodeDefaults = true
     }
 
     fun createBackup(catchLogs: List<CatchLog>, trips: List<FishingTrip>): String {
