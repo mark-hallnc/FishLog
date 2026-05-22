@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -84,51 +83,47 @@ fun AdvancedReportsScreen(
                 }
             }
 
-            if (logs.none { it.id > 0 }) { // Simple check for empty data
-                 Text("No log data available to build reports.", modifier = Modifier.padding(16.dp))
-            } else {
-                ReportBarChart(
-                    title = "Catch Rate by Bait",
-                    buckets = reports.baitBuckets,
-                    emptyMessage = "Not enough bait data yet.",
-                    onBucketClick = { onBucketClick(it, "Bait") }
-                )
+            ReportBarChart(
+                title = "Catch Rate by Bait",
+                buckets = reports.baitBuckets,
+                emptyMessage = "Not enough bait data yet.",
+                onBucketClick = { onBucketClick(it, "Bait") }
+            )
 
-                ReportBarChart(
-                    title = "Catch Rate by Depth",
-                    buckets = reports.depthBuckets,
-                    emptyMessage = "Not enough depth data yet.",
-                    onBucketClick = { onBucketClick(it, "Depth") }
-                )
+            ReportBarChart(
+                title = "Catch Rate by Depth",
+                buckets = reports.depthBuckets,
+                emptyMessage = "Not enough depth data yet.",
+                onBucketClick = { onBucketClick(it, "Depth") }
+            )
 
-                ReportBarChart(
-                    title = "Catch Rate by Temperature",
-                    buckets = reports.waterTempBuckets,
-                    emptyMessage = "Not enough temperature data yet.",
-                    onBucketClick = { onBucketClick(it, "Temperature") }
-                )
+            ReportBarChart(
+                title = "Catch Rate by Temperature",
+                buckets = reports.waterTempBuckets,
+                emptyMessage = "Not enough temperature data yet.",
+                onBucketClick = { onBucketClick(it, "Temperature") }
+            )
 
-                ReportBarChart(
-                    title = "Catch Rate by Time of Day",
-                    buckets = reports.timeOfDayBuckets,
-                    emptyMessage = "Not enough time data yet.",
-                    onBucketClick = { onBucketClick(it, "Time of Day") }
-                )
+            ReportBarChart(
+                title = "Catch Rate by Time of Day",
+                buckets = reports.timeOfDayBuckets,
+                emptyMessage = "Not enough time data yet.",
+                onBucketClick = { onBucketClick(it, "Time of Day") }
+            )
 
-                ReportBarChart(
-                    title = "Catch Rate by Month",
-                    buckets = reports.monthBuckets,
-                    emptyMessage = "Not enough monthly data yet.",
-                    onBucketClick = { onBucketClick(it, "Month") }
-                )
+            ReportBarChart(
+                title = "Catch Rate by Month",
+                buckets = reports.monthBuckets,
+                emptyMessage = "Not enough monthly data yet.",
+                onBucketClick = { onBucketClick(it, "Month") }
+            )
 
-                ReportBarChart(
-                    title = "Catch Rate by Moon Phase",
-                    buckets = reports.moonPhaseBuckets,
-                    emptyMessage = "Not enough moon phase data yet.",
-                    onBucketClick = { onBucketClick(it, "Moon Phase") }
-                )
-            }
+            ReportBarChart(
+                title = "Catch Rate by Moon Phase",
+                buckets = reports.moonPhaseBuckets,
+                emptyMessage = "Not enough moon phase data yet.",
+                onBucketClick = { onBucketClick(it, "Moon Phase") }
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
         }

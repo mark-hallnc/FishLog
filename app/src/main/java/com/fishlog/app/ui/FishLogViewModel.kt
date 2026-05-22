@@ -1,5 +1,6 @@
 package com.fishlog.app.ui
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,7 +18,8 @@ class FishLogViewModel(
     private val catchLogDao: CatchLogDao,
     private val fishingTripDao: FishingTripDao,
     private val cloudBackupRepository: CloudBackupRepository,
-    private val weatherRepository: WeatherRepository
+    private val weatherRepository: WeatherRepository,
+    private val waterBodySuggestionRepository: WaterBodySuggestionRepository? = null
 ) : ViewModel() {
 
     // Account & Backup States
@@ -38,6 +40,13 @@ class FishLogViewModel(
 
     var lastCloudBackupAt by mutableStateOf(cloudBackupRepository.getLastBackupAt())
         private set
+
+    // Nearby Water Bodies
+    var nearbyWaterBodies by mutableStateOf<List<NearbyWaterBody>>(emptyList())
+        private set
+    var nearbyWaterBodiesLoading by mutableStateOf(false)
+        private set
+    private var nearbyWaterBodiesLoadedForSession = false
 
     // Active Trip Forecast State (In-memory only)
     var activeTripForecast by mutableStateOf<DailyForecastData?>(null)
@@ -188,6 +197,46 @@ class FishLogViewModel(
 
     fun clearBackupMessage() {
         backupStatusMessage = null
+    }
+
+    fun loadNearbyWaterBodiesForTripForm(
+        locationService: com.fishlog.app.location.LocationService,
+        forceRefresh: Boolean = false
+    ) {
+        val repo = waterBodySuggestionRepository ?: return
+        
+        if (nearbyWaterBodiesLoadedForSession && !forceRefresh) return
+        
+        // Initial load from cache
+        nearbyWaterBodies = repo.getCachedNearbyWaterBodies()
+        
+        if (!locationService.hasLocationPermission()) return
+
+        viewModelScope.launch {
+            val loc = locationService.getCurrentLocation()
+            if (loc != null) {
+                // If cache is valid for this location, don't block for network unless forced
+                if (repo.isCacheValid(loc.latitude, loc.longitude) && !forceRefresh) {
+                    nearbyWaterBodiesLoadedForSession = true
+                    return@launch
+                }
+
+                nearbyWaterBodiesLoading = true
+                val result = repo.fetchNearbyWaterBodies(loc.latitude, loc.longitude)
+                if (result.isSuccess) {
+                    nearbyWaterBodies = result.getOrNull() ?: emptyList()
+                    nearbyWaterBodiesLoadedForSession = true
+                } else {
+                    // Fail silently, keep cache
+                    Log.d("FishLogWaterBodies", "Nearby fetch failed or timed out. Using cache if available.")
+                }
+                nearbyWaterBodiesLoading = false
+            }
+        }
+    }
+
+    fun resetNearbyWaterBodiesSession() {
+        nearbyWaterBodiesLoadedForSession = false
     }
 
     fun loadActiveTripForecastIfNeeded(trip: FishingTrip) {

@@ -56,6 +56,14 @@ fun EditTripScreen(
     val scope = rememberCoroutineScope()
     val locationService = remember { LocationService(context) }
 
+    val nearbyWaterBodies = viewModel.nearbyWaterBodies
+    val isNearbyLoading = viewModel.nearbyWaterBodiesLoading
+
+    // Initial nearby load
+    LaunchedEffect(Unit) {
+        viewModel.loadNearbyWaterBodiesForTripForm(locationService)
+    }
+
     fun performSave(bulkUpdate: Boolean = false) {
         if (isSaving) return
         isSaving = true
@@ -157,6 +165,9 @@ fun EditTripScreen(
                         value = waterBody,
                         onValueChange = { waterBody = it },
                         existingWaterBodies = existingWaterBodies,
+                        nearbyWaterBodies = nearbyWaterBodies,
+                        onRefreshNearby = { viewModel.loadNearbyWaterBodiesForTripForm(locationService) },
+                        isNearbyLoading = isNearbyLoading,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

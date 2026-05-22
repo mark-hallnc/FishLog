@@ -2,7 +2,6 @@ package com.fishlog.app.analytics
 
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
-import java.text.SimpleDateFormat
 import java.util.*
 
 object AdvancedReportsEngine {
@@ -29,7 +28,15 @@ object AdvancedReportsEngine {
             }
         }.map { (label, group) ->
             createBucket(label, group.map { it.first })
-        }.sortedBy { it.label } // Natural order for depth
+        }.sortedBy { 
+            when (it.label) {
+                "0–5 ft" -> 1
+                "6–10 ft" -> 2
+                "11–15 ft" -> 3
+                "16–25 ft" -> 4
+                else -> 5
+            }
+        }
 
         // 2. Bait
         val baitBuckets = filteredLogs.filter { it.bait.isNotBlank() }
@@ -54,7 +61,15 @@ object AdvancedReportsEngine {
             }
         }.map { (label, group) ->
             createBucket(label, group.map { it.first })
-        }.sortedBy { it.label }
+        }.sortedBy { 
+            when (it.label) {
+                "<55°F" -> 1
+                "55–64°F" -> 2
+                "65–74°F" -> 3
+                "75–84°F" -> 4
+                else -> 5
+            }
+        }
 
         // 4. Month
         val monthLabels = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
