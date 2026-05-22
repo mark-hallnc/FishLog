@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -185,10 +186,10 @@ fun TripDetailScreen(
                             text = buildString {
                                 append(forecast.condition)
                                 if (forecast.highTempF != null && forecast.lowTempF != null) {
-                                    append(" · ${forecast.highTempF.toInt()}°/${forecast.lowTempF.toInt()}°")
+                                    append(" · ${FormatUtils.formatWholeNumber(forecast.highTempF)}°/${FormatUtils.formatWholeNumber(forecast.lowTempF)}°")
                                 }
                                 if (forecast.windSpeedMph != null) {
-                                    append(" · Wind ${forecast.windSpeedMph.toInt()} mph")
+                                    append(" · Wind ${FormatUtils.formatWholeNumber(forecast.windSpeedMph)} mph")
                                     val dir = getWindDirection(forecast.windDirectionDegrees)
                                     if (dir.isNotBlank()) append(" $dir")
                                 }
@@ -327,12 +328,12 @@ fun TripDetailScreen(
                         // 2. Air Temp
                         val tempValue = buildString {
                             if (trip.airTempF != null) {
-                                append("${trip.airTempF.toInt()}°$tempSuffix")
+                                append("${FormatUtils.formatWholeNumber(trip.airTempF)}°$tempSuffix")
                                 if (trip.feelsLikeF != null) {
-                                    append(" · feels like ${trip.feelsLikeF.toInt()}°$tempSuffix")
+                                    append(" · feels like ${FormatUtils.formatWholeNumber(trip.feelsLikeF)}°$tempSuffix")
                                 }
                             } else if (trip.feelsLikeF != null) {
-                                append("Feels like ${trip.feelsLikeF.toInt()}°$tempSuffix")
+                                append("Feels like ${FormatUtils.formatWholeNumber(trip.feelsLikeF)}°$tempSuffix")
                             }
                         }
                         if (tempValue.isNotBlank()) {
@@ -346,11 +347,11 @@ fun TripDetailScreen(
                             }
                             if (trip.windSpeedMph != null) {
                                 if (this.isNotEmpty()) append(" · ")
-                                append("${trip.windSpeedMph.toInt()} mph")
+                                append("${FormatUtils.formatWholeNumber(trip.windSpeedMph)} mph")
                                 val dir = getWindDirection(trip.windDirectionDegrees)
                                 if (dir.isNotBlank()) append(" $dir")
                                 if (trip.windGustMph != null && trip.windGustMph > (trip.windSpeedMph ?: 0.0) + 2) {
-                                    append(" · gusts ${trip.windGustMph.toInt()} mph")
+                                    append(" · gusts ${FormatUtils.formatWholeNumber(trip.windGustMph)} mph")
                                 }
                             }
                         }
@@ -361,7 +362,7 @@ fun TripDetailScreen(
                         // 4. Pressure
                         val pressureValue = buildString {
                             if (trip.barometricPressureHpa != null) {
-                                append("${trip.barometricPressureHpa.toInt()} hPa")
+                                append("${FormatUtils.formatWholeNumber(trip.barometricPressureHpa)} hPa")
                             }
                             if (trip.pressureTrend.isNotBlank()) {
                                 if (this.isNotEmpty()) append(" ")
@@ -375,13 +376,13 @@ fun TripDetailScreen(
 
                         // 5. Humidity, Cloud Cover, Precipitation
                         if (trip.humidityPercent != null) {
-                            ConditionDetailItem("Humidity", "${trip.humidityPercent.toInt()}%")
+                            ConditionDetailItem("Humidity", "${FormatUtils.formatWholeNumber(trip.humidityPercent)}%")
                         }
                         if (trip.cloudCoverPercent != null) {
-                            ConditionDetailItem("Cloud Cover", "${trip.cloudCoverPercent.toInt()}%")
+                            ConditionDetailItem("Cloud Cover", "${FormatUtils.formatWholeNumber(trip.cloudCoverPercent)}%")
                         }
                         if (trip.precipitationIn != null && trip.precipitationIn > 0) {
-                            ConditionDetailItem("Precipitation", "${String.format("%.2f", trip.precipitationIn)} in")
+                            ConditionDetailItem("Precipitation", "${FormatUtils.formatDecimal(trip.precipitationIn)} in")
                         }
 
                         // 6. Water Clarity
@@ -418,10 +419,10 @@ fun TripDetailScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 StatItem("Phase", trip.moonPhaseName, Modifier.weight(1f))
-                                StatItem("Illumination", "${trip.moonIlluminationPercent?.toInt() ?: 0}%", Modifier.weight(1f))
+                                StatItem("Illumination", "${FormatUtils.formatWholeNumber(trip.moonIlluminationPercent)}%", Modifier.weight(1f))
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem("Moon Age", "${String.format("%.1f", trip.moonAgeDays ?: 0.0)} days", Modifier.weight(1f))
+                                StatItem("Moon Age", "${FormatUtils.formatDecimal(trip.moonAgeDays)} days", Modifier.weight(1f))
                                 StatItem("Trend", if (trip.moonWaxing == true) "Waxing" else "Waning", Modifier.weight(1f))
                             }
                         }

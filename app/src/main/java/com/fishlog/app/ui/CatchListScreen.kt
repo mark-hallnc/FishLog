@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -469,16 +470,16 @@ fun CatchItem(
                 
                 if (isNoCatch) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (catch.waterTemp.isNotBlank()) {
+                        if (catch.waterTemp.isNotBlank() || catch.waterTempF != null) {
                             Icon(Icons.Default.Thermostat, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary)
-                            val tempText = catch.waterTempF?.let { "$it" } ?: catch.waterTemp
-                            Text(" $tempText °F", style = MaterialTheme.typography.bodySmall)
+                            val tempValue = catch.waterTempF ?: catch.waterTemp.toDoubleOrNull()
+                            Text(" ${FormatUtils.formatWholeNumber(tempValue)} °F", style = MaterialTheme.typography.bodySmall)
                             Spacer(modifier = Modifier.width(12.dp))
                         }
-                        if (catch.depth.isNotBlank()) {
+                        if (catch.depth.isNotBlank() || catch.depthFeet != null) {
                             Icon(Icons.Default.Water, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary)
-                            val depthText = catch.depthFeet?.let { "$it" } ?: catch.depth
-                            Text(" $depthText ft", style = MaterialTheme.typography.bodySmall)
+                            val depthValue = catch.depthFeet ?: catch.depth.toDoubleOrNull()
+                            Text(" ${FormatUtils.formatWholeNumber(depthValue)} ft", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     if (catch.bait.isNotBlank()) {
@@ -492,9 +493,9 @@ fun CatchItem(
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.tertiary
                         )
-                        val lengthText = catch.lengthInches?.let { "$it" } ?: catch.length
+                        val lengthValue = catch.lengthInches ?: catch.length.toDoubleOrNull()
                         Text(
-                            text = " $lengthText in",
+                            text = " ${FormatUtils.formatDecimal(lengthValue)} in",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -504,9 +505,9 @@ fun CatchItem(
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.tertiary
                         )
-                        val weightText = catch.weightLbs?.let { "$it" } ?: catch.weight
+                        val weightValue = catch.weightLbs ?: catch.weight.toDoubleOrNull()
                         Text(
-                            text = " $weightText lbs",
+                            text = " ${FormatUtils.formatDecimal(weightValue)} lbs",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

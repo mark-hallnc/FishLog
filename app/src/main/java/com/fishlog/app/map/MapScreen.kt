@@ -21,6 +21,7 @@ import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.location.LocationService
+import com.fishlog.app.util.FormatUtils
 import com.fishlog.app.ui.DropdownFilter
 import com.fishlog.app.ui.FishLogViewModel
 import com.fishlog.app.ui.LogTypeFilter
@@ -346,9 +347,13 @@ fun MapScreen(
                             val tripLine = if (trip != null) "\nTrip: ${trip.name}" else ""
                             
                             marker.snippet = if (isNoCatch) {
-                                "Date: $dateStr\nBait: ${log.bait}\nTemp: ${log.waterTempF ?: log.waterTemp}°F, Depth: ${log.depthFeet ?: log.depth}ft$tripLine"
+                                val tempValue = log.waterTempF ?: log.waterTemp.toDoubleOrNull()
+                                val depthValue = log.depthFeet ?: log.depth.toDoubleOrNull()
+                                "Date: $dateStr\nBait: ${log.bait}\nTemp: ${FormatUtils.formatWholeNumber(tempValue)}°F, Depth: ${FormatUtils.formatWholeNumber(depthValue)}ft$tripLine"
                             } else {
-                                "Date: $dateStr\nBait: ${log.bait}\nSize: ${log.lengthInches ?: log.length} in, ${log.weightLbs ?: log.weight} lbs$tripLine"
+                                val lengthValue = log.lengthInches ?: log.length.toDoubleOrNull()
+                                val weightValue = log.weightLbs ?: log.weight.toDoubleOrNull()
+                                "Date: $dateStr\nBait: ${log.bait}\nSize: ${FormatUtils.formatDecimal(lengthValue)} in, ${FormatUtils.formatDecimal(weightValue)} lbs$tripLine"
                             }
                             
                             // Custom icons for catch and no-catch

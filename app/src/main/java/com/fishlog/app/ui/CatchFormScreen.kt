@@ -39,6 +39,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.FormatUtils
 import com.fishlog.app.ui.RecentValueChips
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
@@ -95,10 +96,18 @@ fun CatchFormScreen(
             .take(5)
     }
 
-    var length by remember { mutableStateOf(editingCatch?.length ?: "") }
-    var weight by remember { mutableStateOf(editingCatch?.weight ?: "") }
-    var waterTemp by remember { mutableStateOf(editingCatch?.waterTemp ?: "") }
-    var depth by remember { mutableStateOf(editingCatch?.depth ?: "") }
+    var length by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatDecimal(it.lengthInches ?: it.length.toDoubleOrNull()) } ?: "") }
+    var weight by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatDecimal(it.weightLbs ?: it.weight.toDoubleOrNull()) } ?: "") }
+    var waterTemp by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatWholeNumber(it.waterTempF ?: it.waterTemp.toDoubleOrNull()) } ?: "") }
+    var depth by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatWholeNumber(it.depthFeet ?: it.depth.toDoubleOrNull()) } ?: "") }
+    
+    // Convert "—" back to empty string for the text field
+    LaunchedEffect(Unit) {
+        if (length == "—") length = ""
+        if (weight == "—") weight = ""
+        if (waterTemp == "—") waterTemp = ""
+        if (depth == "—") depth = ""
+    }
     var bait by remember { mutableStateOf(editingCatch?.bait ?: "") }
     var notes by remember { mutableStateOf(editingCatch?.notes ?: "") }
     var photoUri by remember { mutableStateOf(editingCatch?.photoUri) }

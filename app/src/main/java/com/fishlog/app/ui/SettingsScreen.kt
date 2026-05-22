@@ -531,7 +531,7 @@ fun SettingsScreen(
                         }
                         
                         Text(
-                            text = "Optional cloud backup and restore will be a premium feature later. FishLog still works fully offline, and local export/import remains available.",
+                            text = "Optional cloud backup and restore will protect your logs in the event of a lost or damaged device. Photos are not backed up on the cloud at this time - on restore all trip/log data will be restored but photos will not.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -722,7 +722,7 @@ fun SettingsScreen(
                             }
                             
                             Text(
-                                text = "Cloud backup protects log and trip data. Photo file backup will be added later.",
+                                text = "Cloud backup protects log and trip data. Photo file backup is not available at this time.",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(top = 12.dp)

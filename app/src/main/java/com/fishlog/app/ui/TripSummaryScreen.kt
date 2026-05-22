@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -156,14 +157,14 @@ fun TripSummaryScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         val row1 = listOfNotNull(
                             trip.weatherSummary.ifBlank { trip.skyCondition.ifBlank { null } },
-                            trip.airTempF?.let { "${it.toInt()}$tempSuffix" }
+                            trip.airTempF?.let { "${FormatUtils.formatWholeNumber(it)}$tempSuffix" }
                         )
                         if (row1.isNotEmpty()) {
                             Text(row1.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
                         }
                         
                         val row2 = listOfNotNull(
-                            if (trip.windSpeedMph != null) "Wind ${trip.windSpeedMph.toInt()} mph" else trip.windCondition.ifBlank { null },
+                            if (trip.windSpeedMph != null) "Wind ${FormatUtils.formatWholeNumber(trip.windSpeedMph)} mph" else trip.windCondition.ifBlank { null },
                             if (trip.waterClarity.isNotBlank()) "Water Clarity: ${trip.waterClarity}" else null
                         )
                         if (row2.isNotEmpty()) {
@@ -198,7 +199,7 @@ fun TripSummaryScreen(
                             size = 32.dp
                         )
                         Text(
-                            text = "${trip.moonPhaseName} · ${trip.moonIlluminationPercent?.toInt() ?: 0}% illuminated",
+                            text = "${trip.moonPhaseName} · ${FormatUtils.formatWholeNumber(trip.moonIlluminationPercent)}% illuminated",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }

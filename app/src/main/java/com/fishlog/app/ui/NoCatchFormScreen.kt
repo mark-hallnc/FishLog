@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.FormatUtils
 import com.fishlog.app.ui.RecentValueChips
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
@@ -64,8 +65,14 @@ fun NoCatchFormScreen(
             .take(5)
     }
 
-    var waterTemp by remember { mutableStateOf(editingLog?.waterTemp ?: "") }
-    var depth by remember { mutableStateOf(editingLog?.depth ?: "") }
+    var waterTemp by remember { mutableStateOf(editingLog?.let { FormatUtils.formatWholeNumber(it.waterTempF ?: it.waterTemp.toDoubleOrNull()) } ?: "") }
+    var depth by remember { mutableStateOf(editingLog?.let { FormatUtils.formatWholeNumber(it.depthFeet ?: it.depth.toDoubleOrNull()) } ?: "") }
+    
+    // Convert "—" back to empty string for the text field
+    LaunchedEffect(Unit) {
+        if (waterTemp == "—") waterTemp = ""
+        if (depth == "—") depth = ""
+    }
     var bait by remember { mutableStateOf(editingLog?.bait ?: "") }
     var notes by remember { mutableStateOf(editingLog?.notes ?: "") }
     

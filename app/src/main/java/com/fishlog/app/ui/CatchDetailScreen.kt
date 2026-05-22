@@ -26,6 +26,7 @@ import com.fishlog.app.map.StaticMapPreview
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -155,10 +156,10 @@ fun CatchDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Measurements", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 12.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            val lengthText = catch.lengthInches?.let { "$it $lengthSuffix" } ?: "${catch.length} $lengthSuffix"
-                            val weightText = catch.weightLbs?.let { "$it $weightSuffix" } ?: "${catch.weight} $weightSuffix"
-                            DetailItem("Length", lengthText, Modifier.weight(1f))
-                            DetailItem("Weight", weightText, Modifier.weight(1f))
+                            val lengthValue = catch.lengthInches ?: catch.length.toDoubleOrNull()
+                            val weightValue = catch.weightLbs ?: catch.weight.toDoubleOrNull()
+                            DetailItem("Length", FormatUtils.formatLength(lengthValue, lengthSuffix), Modifier.weight(1f))
+                            DetailItem("Weight", FormatUtils.formatWeight(weightValue, weightSuffix), Modifier.weight(1f))
                         }
                     }
                 }
@@ -173,10 +174,10 @@ fun CatchDetailScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Conditions & Bait", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 12.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        val tempText = catch.waterTempF?.let { "$it $tempSuffix" } ?: "${catch.waterTemp} $tempSuffix"
-                        val depthText = catch.depthFeet?.let { "$it $depthSuffix" } ?: "${catch.depth} $depthSuffix"
-                        DetailItem("Water Temp", tempText, Modifier.weight(1f))
-                        DetailItem("Depth", depthText, Modifier.weight(1f))
+                        val tempValue = catch.waterTempF ?: catch.waterTemp.toDoubleOrNull()
+                        val depthValue = catch.depthFeet ?: catch.depth.toDoubleOrNull()
+                        DetailItem("Water Temp", FormatUtils.formatWaterTemp(tempValue, tempSuffix), Modifier.weight(1f))
+                        DetailItem("Depth", FormatUtils.formatDepth(depthValue, depthSuffix), Modifier.weight(1f))
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     DetailItem("Bait / Lure", catch.bait)
