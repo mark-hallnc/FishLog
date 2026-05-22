@@ -30,7 +30,7 @@ class FormatUtilsTest {
     @Test
     fun testFormatWeight() {
         assertEquals("3 lb", FormatUtils.formatWeight(3.0))
-        assertEquals("3.76 lb", FormatUtils.formatWeight(3.7567))
+        assertEquals("3 lb 12 oz", FormatUtils.formatWeight(3.7567))
         assertEquals("—", FormatUtils.formatWeight(null))
     }
 

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.fishlog.app.analytics.PatternInsight
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
+import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -200,8 +201,16 @@ private fun EvidenceRow(
                 )
                 
                 if (log.bait.isNotBlank()) {
+                    val lengthValue = log.lengthInches ?: log.length.toDoubleOrNull()
+                    val weightValue = log.weightLbs ?: log.weight.toDoubleOrNull()
+                    val measurements = listOfNotNull(
+                        if (log.bait.isNotBlank()) "Bait: ${log.bait}" else null,
+                        if (isCatch && lengthValue != null) "Len: ${FormatUtils.formatLength(lengthValue)}" else null,
+                        if (isCatch && weightValue != null) "Wt: ${FormatUtils.formatWeight(weightValue)}" else null
+                    ).joinToString(" · ")
+                    
                     Text(
-                        text = "Bait: ${log.bait}",
+                        text = measurements,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.secondary
                     )

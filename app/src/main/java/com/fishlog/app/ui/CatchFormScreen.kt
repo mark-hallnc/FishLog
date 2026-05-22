@@ -40,6 +40,7 @@ import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.util.FormatUtils
+import com.fishlog.app.util.WeightUtils
 import com.fishlog.app.ui.RecentValueChips
 import com.fishlog.app.location.LocationService
 import kotlinx.coroutines.launch
@@ -97,16 +98,23 @@ fun CatchFormScreen(
     }
 
     var length by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatDecimal(it.lengthInches ?: it.length.toDoubleOrNull()) } ?: "") }
-    var weight by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatDecimal(it.weightLbs ?: it.weight.toDoubleOrNull()) } ?: "") }
+    
+    val initialWeight = editingCatch?.weightLbs ?: editingCatch?.weight?.toDoubleOrNull()
+    val initialPO = if (!isMetric) WeightUtils.decimalPoundsToPoundsOunces(initialWeight) else null
+    
+    var weightKg by remember { mutableStateOf(if (isMetric) (initialWeight?.let { FormatUtils.formatDecimal(it) } ?: "") else "") }
+    var weightPounds by remember { mutableStateOf(initialPO?.let { if (it.pounds == 0 && it.ounces == 0) "" else it.pounds.toString() } ?: "") }
+    var weightOunces by remember { mutableStateOf(initialPO?.let { if (it.pounds == 0 && it.ounces == 0) "" else it.ounces.toString() } ?: "") }
+
     var waterTemp by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatWholeNumber(it.waterTempF ?: it.waterTemp.toDoubleOrNull()) } ?: "") }
     var depth by remember { mutableStateOf(editingCatch?.let { FormatUtils.formatWholeNumber(it.depthFeet ?: it.depth.toDoubleOrNull()) } ?: "") }
     
     // Convert "—" back to empty string for the text field
     LaunchedEffect(Unit) {
         if (length == "—") length = ""
-        if (weight == "—") weight = ""
         if (waterTemp == "—") waterTemp = ""
         if (depth == "—") depth = ""
+        if (weightKg == "—") weightKg = ""
     }
     var bait by remember { mutableStateOf(editingCatch?.bait ?: "") }
     var notes by remember { mutableStateOf(editingCatch?.notes ?: "") }
@@ -249,7 +257,9 @@ fun CatchFormScreen(
                                     showConfirmation = false
                                     species = ""
                                     length = ""
-                                    weight = ""
+                                    weightKg = ""
+                                    weightPounds = ""
+                                    weightOunces = ""
                                     waterTemp = ""
                                     depth = ""
                                     bait = ""
@@ -308,14 +318,40 @@ fun CatchFormScreen(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            OutlinedTextField(
-                                value = weight,
-                                onValueChange = { weight = it },
-                                label = { Text(weightLabel) },
-                                modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                shape = RoundedCornerShape(12.dp)
-                            )
+                            if (isMetric) {
+                                OutlinedTextField(
+                                    value = weightKg,
+                                    onValueChange = { weightKg = it },
+                                    label = { Text("Weight (kg)") },
+                                    modifier = Modifier.weight(1f),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            } else {
+                                Row(modifier = Modifier.weight(1.2f), verticalAlignment = Alignment.CenterVertically) {
+                                    OutlinedTextField(
+                                        value = weightPounds,
+                                        onValueChange = { if (it.isEmpty() || it.all { c -> c.isDigit() }) weightPounds = it },
+                                        label = { Text("Weight (lb)") },
+                                        modifier = Modifier.weight(1f),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    OutlinedTextField(
+                                        value = weightOunces,
+                                        onValueChange = { 
+                                            if (it.isEmpty() || (it.all { c -> c.isDigit() } && it.toInt() < 16)) {
+                                                weightOunces = it
+                                            }
+                                        },
+                                        label = { Text("oz") },
+                                        modifier = Modifier.weight(1f),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -597,6 +633,24 @@ fun CatchFormScreen(
                                         }
                                     }
 
+                                    val finalWeightLbs: Double? = if (isMetric) {
+                                        weightKg.toDoubleOrNull()
+                                    } else {
+                                        val p = weightPounds.toIntOrNull() ?: 0
+                                        val o = weightOunces.toIntOrNull() ?: 0
+                                        if (weightPounds.isNotBlank() || weightOunces.isNotBlank()) {
+                                            WeightUtils.poundsOuncesToDecimalPounds(p, o)
+                                        } else null
+                                    }
+                                    
+                                    val weightString = if (isMetric) {
+                                        weightKg
+                                    } else {
+                                        if (finalWeightLbs != null) {
+                                            WeightUtils.formatWeightPoundsOunces(finalWeightLbs)
+                                        } else ""
+                                    }
+
                                     if (editingCatch != null) {
                                         // Delete old photo if it was removed or replaced
                                         if (editingCatch.photoUri != photoUri) {
@@ -606,7 +660,7 @@ fun CatchFormScreen(
                                         val updatedCatch = editingCatch.copy(
                                             species = species,
                                             length = length,
-                                            weight = weight,
+                                            weight = weightString,
                                             waterTemp = waterTemp,
                                             depth = depth,
                                             bait = bait,
@@ -614,7 +668,7 @@ fun CatchFormScreen(
                                             latitude = lat,
                                             longitude = lon,
                                             lengthInches = length.toDoubleOrNull(),
-                                            weightLbs = weight.toDoubleOrNull(),
+                                            weightLbs = finalWeightLbs,
                                             waterTempF = waterTemp.toDoubleOrNull(),
                                             depthFeet = depth.toDoubleOrNull(),
                                             photoUri = photoUri,
@@ -627,7 +681,7 @@ fun CatchFormScreen(
                                             viewModel.saveCatchRun(
                                                 species = species,
                                                 length = length,
-                                                weight = weight,
+                                                weight = weightString,
                                                 waterTemp = waterTemp,
                                                 depth = depth,
                                                 bait = bait,
@@ -635,7 +689,7 @@ fun CatchFormScreen(
                                                 latitude = lat,
                                                 longitude = lon,
                                                 lengthInches = length.toDoubleOrNull(),
-                                                weightLbs = weight.toDoubleOrNull(),
+                                                weightLbs = finalWeightLbs,
                                                 waterTempF = waterTemp.toDoubleOrNull(),
                                                 depthFeet = depth.toDoubleOrNull(),
                                                 photoUri = photoUri,
@@ -645,7 +699,7 @@ fun CatchFormScreen(
                                             viewModel.saveCatch(
                                                 species = species,
                                                 length = length,
-                                                weight = weight,
+                                                weight = weightString,
                                                 waterTemp = waterTemp,
                                                 depth = depth,
                                                 bait = bait,
@@ -653,7 +707,7 @@ fun CatchFormScreen(
                                                 latitude = lat,
                                                 longitude = lon,
                                                 lengthInches = length.toDoubleOrNull(),
-                                                weightLbs = weight.toDoubleOrNull(),
+                                                weightLbs = finalWeightLbs,
                                                 waterTempF = waterTemp.toDoubleOrNull(),
                                                 depthFeet = depth.toDoubleOrNull(),
                                                 photoUri = photoUri

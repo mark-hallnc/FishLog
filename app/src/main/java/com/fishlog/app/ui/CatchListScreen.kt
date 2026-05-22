@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,6 +33,7 @@ enum class LogTypeFilter { ALL, CATCHES_ONLY, NO_CATCH_ONLY }
 @Composable
 fun CatchListScreen(
     viewModel: FishLogViewModel,
+    unitSystem: String = AppPreferences.UNITS_US,
     onBack: () -> Unit,
     onCatchClick: (CatchLog) -> Unit,
     onPhotoClick: (String) -> Unit = {}
@@ -218,7 +220,8 @@ fun CatchListScreen(
                             catch = catch,
                             onClick = { onCatchClick(catch) },
                             onPhotoClick = onPhotoClick,
-                            viewModel = viewModel
+                            viewModel = viewModel,
+                            unitSystem = unitSystem
                         )
                     }
                 }
@@ -410,9 +413,15 @@ fun CatchItem(
     catch: CatchLog,
     onClick: () -> Unit,
     onPhotoClick: (String) -> Unit = {},
-    viewModel: FishLogViewModel? = null
+    viewModel: FishLogViewModel? = null,
+    unitSystem: String = AppPreferences.UNITS_US
 ) {
     val isNoCatch = catch.logType == "NO_CATCH"
+    val isMetric = unitSystem == AppPreferences.UNITS_METRIC
+    val tempSuffix = if (isMetric) "°C" else "°F"
+    val depthSuffix = if (isMetric) "m" else "ft"
+    val lengthSuffix = if (isMetric) "cm" else "in"
+    val weightSuffix = if (isMetric) "kg" else "lbs"
     val trips by (viewModel?.allTrips?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
     val trip = remember(trips, catch.tripId) { trips.find { it.id == catch.tripId } }
     
@@ -473,13 +482,13 @@ fun CatchItem(
                         if (catch.waterTemp.isNotBlank() || catch.waterTempF != null) {
                             Icon(Icons.Default.Thermostat, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary)
                             val tempValue = catch.waterTempF ?: catch.waterTemp.toDoubleOrNull()
-                            Text(" ${FormatUtils.formatWholeNumber(tempValue)} °F", style = MaterialTheme.typography.bodySmall)
+                            Text(" ${FormatUtils.formatWaterTemp(tempValue, tempSuffix)}", style = MaterialTheme.typography.bodySmall)
                             Spacer(modifier = Modifier.width(12.dp))
                         }
                         if (catch.depth.isNotBlank() || catch.depthFeet != null) {
                             Icon(Icons.Default.Water, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary)
                             val depthValue = catch.depthFeet ?: catch.depth.toDoubleOrNull()
-                            Text(" ${FormatUtils.formatWholeNumber(depthValue)} ft", style = MaterialTheme.typography.bodySmall)
+                            Text(" ${FormatUtils.formatDepth(depthValue, depthSuffix)}", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     if (catch.bait.isNotBlank()) {
@@ -495,7 +504,7 @@ fun CatchItem(
                         )
                         val lengthValue = catch.lengthInches ?: catch.length.toDoubleOrNull()
                         Text(
-                            text = " ${FormatUtils.formatDecimal(lengthValue)} in",
+                            text = " ${FormatUtils.formatLength(lengthValue, lengthSuffix)}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -507,7 +516,7 @@ fun CatchItem(
                         )
                         val weightValue = catch.weightLbs ?: catch.weight.toDoubleOrNull()
                         Text(
-                            text = " ${FormatUtils.formatDecimal(weightValue)} lbs",
+                            text = " ${FormatUtils.formatWeight(weightValue, weightSuffix)}",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

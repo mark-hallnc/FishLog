@@ -19,6 +19,7 @@ import com.fishlog.app.data.*
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.DateFilterControls
 import com.fishlog.app.util.WaterBodyNameUtils
+import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -706,9 +707,9 @@ fun EnvironmentalSection(logs: List<CatchLog>, tempSuffix: String, depthSuffix: 
             if (temps.isNotEmpty()) {
                 Text("Water Temp Range", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    StatItem("Lowest", "${temps.minOrNull()}$tempSuffix", Modifier.weight(1f))
-                    StatItem("Highest", "${temps.maxOrNull()}$tempSuffix", Modifier.weight(1f))
-                    StatItem("Average", "${String.format("%.1f", temps.average())}$tempSuffix", Modifier.weight(1f))
+                    StatItem("Lowest", FormatUtils.formatWaterTemp(temps.minOrNull(), tempSuffix), Modifier.weight(1f))
+                    StatItem("Highest", FormatUtils.formatWaterTemp(temps.maxOrNull(), tempSuffix), Modifier.weight(1f))
+                    StatItem("Average", FormatUtils.formatWaterTemp(temps.average(), tempSuffix), Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -716,9 +717,9 @@ fun EnvironmentalSection(logs: List<CatchLog>, tempSuffix: String, depthSuffix: 
             if (depths.isNotEmpty()) {
                 Text("Depth Range", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    StatItem("Shallowest", "${depths.minOrNull()}$depthSuffix", Modifier.weight(1f))
-                    StatItem("Deepest", "${depths.maxOrNull()}$depthSuffix", Modifier.weight(1f))
-                    StatItem("Average", "${String.format("%.1f", depths.average())}$depthSuffix", Modifier.weight(1f))
+                    StatItem("Shallowest", FormatUtils.formatDepth(depths.minOrNull(), depthSuffix), Modifier.weight(1f))
+                    StatItem("Deepest", FormatUtils.formatDepth(depths.maxOrNull(), depthSuffix), Modifier.weight(1f))
+                    StatItem("Average", FormatUtils.formatDepth(depths.average(), depthSuffix), Modifier.weight(1f))
                 }
             }
         }

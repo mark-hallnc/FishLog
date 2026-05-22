@@ -28,8 +28,12 @@ object FormatUtils {
 
     fun formatWeight(value: Double?, unit: String = "lb"): String {
         if (value == null) return "—"
-        val formatted = decimalFormat.format(value)
-        return "$formatted $unit"
+        return if (unit.lowercase() == "lb" || unit.lowercase() == "lbs") {
+            WeightUtils.formatWeightPoundsOunces(value)
+        } else {
+            val formatted = decimalFormat.format(value)
+            "$formatted $unit"
+        }
     }
 
     fun formatWaterTemp(value: Double?, unit: String = "°F"): String {

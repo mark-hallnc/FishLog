@@ -306,6 +306,7 @@ fun MainScreen(
             )
             "History" -> CatchListScreen(
                 viewModel = viewModel,
+                unitSystem = unitSystem,
                 onBack = { currentScreen = "Home" },
                 onCatchClick = { catch ->
                     selectedCatch = catch

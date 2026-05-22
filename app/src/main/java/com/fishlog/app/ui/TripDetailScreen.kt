@@ -439,7 +439,7 @@ fun TripDetailScreen(
             if (tripLogs.isNotEmpty()) {
                 Text("Logs in this Trip", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 tripLogs.forEach { log ->
-                    CatchItem(catch = log, onClick = { onLogClick(log) })
+                    CatchItem(catch = log, onClick = { onLogClick(log) }, unitSystem = unitSystem)
                 }
             } else {
                 Text("No logs for this trip yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp))
