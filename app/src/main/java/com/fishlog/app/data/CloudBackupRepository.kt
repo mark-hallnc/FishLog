@@ -178,9 +178,9 @@ class CloudBackupRepository(context: Context) {
                 ?: return@withContext Result.failure(Exception("Please sign in to use cloud backup."))
 
             val fileName = "${user.id}/fishlog-backup.json"
-            val bucket = SupabaseClientProvider.client.storage[BUCKET_NAME]
+            val bucket = SupabaseClientProvider.client.storage.from(BUCKET_NAME)
 
-            Log.d(TAG, "Uploading cloud backup: $fileName")
+            Log.d(TAG, "Uploading cloud backup to $BUCKET_NAME/$fileName")
             bucket.upload(fileName, jsonBackup.toByteArray()) {
                 upsert = true
             }
@@ -191,7 +191,12 @@ class CloudBackupRepository(context: Context) {
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Cloud backup failed", e)
-            Result.failure(Exception("Cloud backup failed. Your local data is safe."))
+            val msg = e.message ?: ""
+            if (msg.contains("Bucket not found", ignoreCase = true)) {
+                Result.failure(Exception("Cloud backup is not set up yet."))
+            } else {
+                Result.failure(Exception("Cloud backup failed. Your local data is safe."))
+            }
         }
     }
 
@@ -208,16 +213,25 @@ class CloudBackupRepository(context: Context) {
                 ?: return@withContext Result.failure(Exception("Please sign in to restore from cloud."))
 
             val fileName = "${user.id}/fishlog-backup.json"
-            val bucket = SupabaseClientProvider.client.storage[BUCKET_NAME]
+            val bucket = SupabaseClientProvider.client.storage.from(BUCKET_NAME)
 
-            Log.d(TAG, "Downloading cloud backup: $fileName")
-            val actualBytes = bucket.downloadPublic(fileName) // Note: Adjust if downloadAuthenticated is preferred/needed
+            Log.d(TAG, "Downloading cloud backup from $BUCKET_NAME/$fileName")
+            // Use authenticated downloadAuthenticated() instead of downloadPublic()
+            val actualBytes = bucket.downloadAuthenticated(fileName)
             
             val json = String(actualBytes)
             Result.success(json)
         } catch (e: Exception) {
             Log.e(TAG, "Cloud restore failed", e)
-            Result.failure(Exception("No cloud backup found or restore failed."))
+            val msg = e.message ?: ""
+            when {
+                msg.contains("404") || msg.contains("not found", ignoreCase = true) -> 
+                    Result.failure(Exception("No cloud backup found."))
+                msg.contains("Bucket not found", ignoreCase = true) ->
+                    Result.failure(Exception("Cloud backup is not set up yet."))
+                else -> 
+                    Result.failure(Exception("Cloud restore failed. Your local data was not changed."))
+            }
         }
     }
 }
