@@ -8,6 +8,7 @@ import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.data.CloudBackupRepository
 import com.fishlog.app.data.FishLogDatabase
 import com.fishlog.app.data.JsonBackupHelper
+import com.fishlog.app.data.PhotoStorageHelper
 import kotlinx.coroutines.flow.first
 
 class AutoBackupWorker(
@@ -43,10 +44,10 @@ class AutoBackupWorker(
             val database = FishLogDatabase.getDatabase(applicationContext)
             val catchLogs = database.catchLogDao().getAllCatches().first()
             val trips = database.fishingTripDao().getAllTrips().first()
-            val jsonBackup = JsonBackupHelper.createBackup(catchLogs, trips)
+            val photoHelper = PhotoStorageHelper(applicationContext)
 
             // 4. Calls CloudBackupRepository.backupNow()
-            val result = cloudRepo.backupNow(jsonBackup)
+            val result = cloudRepo.backupNow(catchLogs, trips, photoHelper)
 
             return if (result.isSuccess) {
                 // 5. On success

@@ -9,6 +9,7 @@ import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Required Supabase setup:
@@ -163,11 +164,16 @@ class CloudBackupRepository(context: Context) {
     }
 
     /**
-     * Uploads the full backup JSON to Supabase Storage.
+     * Uploads the full backup JSON and photos to Supabase Storage.
      * Bucket: fishlog-backups
      * Path: {userId}/fishlog-backup.json
+     * Photos: {userId}/photos/{fileName}
      */
-    suspend fun backupNow(jsonBackup: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun backupNow(
+        catchLogs: List<CatchLog>,
+        trips: List<FishingTrip>,
+        photoStorageHelper: PhotoStorageHelper
+    ): Result<CloudBackupResult> = withContext(Dispatchers.IO) {
         try {
             if (!SupabaseClientProvider.isConfigured()) {
                 return@withContext Result.failure(Exception("Supabase is not configured."))
@@ -176,18 +182,65 @@ class CloudBackupRepository(context: Context) {
             val user = SupabaseClientProvider.client.auth.currentUserOrNull()
                 ?: return@withContext Result.failure(Exception("Please sign in to use cloud backup."))
 
-            val fileName = "${user.id}/fishlog-backup.json"
             val bucket = SupabaseClientProvider.client.storage.from(BUCKET_NAME)
+            val manifest = mutableListOf<CloudPhotoBackupItem>()
+            
+            var photosFound = 0
+            var photosUploaded = 0
+            var photosFailed = 0
 
-            Log.d(TAG, "Uploading cloud backup to $BUCKET_NAME/$fileName")
-            bucket.upload(fileName, jsonBackup.toByteArray()) {
+            // 1. Upload Photos
+            catchLogs.filter { !it.photoUri.isNullOrBlank() }.forEach { log ->
+                photosFound++
+                val photoFile = photoStorageHelper.getPhotoFile(log.photoUri)
+                if (photoFile != null && photoFile.exists()) {
+                    val ext = photoFile.extension.ifBlank { "jpg" }
+                    val fileName = "${log.localUuid}.$ext"
+                    val cloudPath = "${user.id}/photos/$fileName"
+                    
+                    try {
+                        Log.d(TAG, "Uploading photo: $cloudPath")
+                        bucket.upload(cloudPath, photoFile.readBytes()) {
+                            upsert = true
+                        }
+                        
+                        manifest.add(CloudPhotoBackupItem(
+                            localUuid = log.localUuid,
+                            originalPhotoUri = log.photoUri!!,
+                            cloudPath = cloudPath,
+                            fileName = fileName,
+                            uploadedAt = System.currentTimeMillis()
+                        ))
+                        photosUploaded++
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to upload photo: $cloudPath", e)
+                        photosFailed++
+                    }
+                } else {
+                    Log.w(TAG, "Photo file not found or unreadable: ${log.photoUri}")
+                    photosFailed++
+                }
+            }
+
+            // 2. Generate and Upload Backup JSON
+            val jsonBackup = JsonBackupHelper.createBackup(catchLogs, trips, manifest)
+            val backupFileName = "${user.id}/fishlog-backup.json"
+
+            Log.d(TAG, "Uploading cloud backup JSON to $BUCKET_NAME/$backupFileName")
+            bucket.upload(backupFileName, jsonBackup.toByteArray()) {
                 upsert = true
             }
 
             val now = System.currentTimeMillis()
             prefs.edit().putLong(KEY_LAST_BACKUP_AT, now).apply()
 
-            Result.success(Unit)
+            Result.success(CloudBackupResult(
+                dataBackedUp = true,
+                photosFound = photosFound,
+                photosUploaded = photosUploaded,
+                photosFailed = photosFailed,
+                photosIncluded = true
+            ))
         } catch (e: Exception) {
             Log.e(TAG, "Cloud backup failed", e)
             val msg = e.message ?: ""
@@ -200,9 +253,12 @@ class CloudBackupRepository(context: Context) {
     }
 
     /**
-     * Downloads the backup JSON from Supabase Storage.
+     * Downloads the backup JSON and restores data/photos.
      */
-    suspend fun restoreFromCloud(): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun restoreFromCloud(
+        photoStorageHelper: PhotoStorageHelper,
+        onJsonParsed: suspend (FishLogBackup) -> Unit
+    ): Result<CloudPhotoRestoreResult> = withContext(Dispatchers.IO) {
         try {
             if (!SupabaseClientProvider.isConfigured()) {
                 return@withContext Result.failure(Exception("Supabase is not configured."))
@@ -215,11 +271,41 @@ class CloudBackupRepository(context: Context) {
             val bucket = SupabaseClientProvider.client.storage.from(BUCKET_NAME)
 
             Log.d(TAG, "Downloading cloud backup from $BUCKET_NAME/$fileName")
-            // Use authenticated downloadAuthenticated() instead of downloadPublic()
             val actualBytes = bucket.downloadAuthenticated(fileName)
-            
             val json = String(actualBytes)
-            Result.success(json)
+            val backup = JsonBackupHelper.parseBackup(json)
+
+            // Let the caller handle the Room data import (logs, trips)
+            onJsonParsed(backup)
+
+            // Restore Photos
+            var downloadedCount = 0
+            var failedCount = 0
+            val restoredUris = mutableMapOf<String, String>()
+            
+            backup.photoBackupManifest.forEach { item ->
+                try {
+                    Log.d(TAG, "Restoring photo: ${item.cloudPath}")
+                    val photoBytes = bucket.downloadAuthenticated(item.cloudPath)
+                    val newLocalUri = photoStorageHelper.savePhotoBytes(photoBytes, item.fileName)
+                    
+                    if (newLocalUri != null) {
+                        restoredUris[item.localUuid] = newLocalUri
+                        downloadedCount++
+                    } else {
+                        failedCount++
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to restore photo: ${item.cloudPath}", e)
+                    failedCount++
+                }
+            }
+
+            Result.success(CloudPhotoRestoreResult(
+                downloadedCount = downloadedCount,
+                failedCount = failedCount,
+                restoredPhotoUris = restoredUris
+            ))
         } catch (e: Exception) {
             Log.e(TAG, "Cloud restore failed", e)
             val msg = e.message ?: ""

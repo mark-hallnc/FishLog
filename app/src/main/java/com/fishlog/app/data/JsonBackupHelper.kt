@@ -7,10 +7,11 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class FishLogBackup(
     val appName: String = "FishLog",
-    val backupVersion: Int = 2,
+    val backupVersion: Int = 3,
     val createdAt: Long = System.currentTimeMillis(),
     val catchLogs: List<CatchLog>,
-    val trips: List<FishingTrip>
+    val trips: List<FishingTrip>,
+    val photoBackupManifest: List<CloudPhotoBackupItem> = emptyList()
 )
 
 object JsonBackupHelper {
@@ -20,10 +21,15 @@ object JsonBackupHelper {
         encodeDefaults = true
     }
 
-    fun createBackup(catchLogs: List<CatchLog>, trips: List<FishingTrip>): String {
+    fun createBackup(
+        catchLogs: List<CatchLog>,
+        trips: List<FishingTrip>,
+        photoManifest: List<CloudPhotoBackupItem> = emptyList()
+    ): String {
         val backup = FishLogBackup(
             catchLogs = catchLogs,
-            trips = trips
+            trips = trips,
+            photoBackupManifest = photoManifest
         )
         return json.encodeToString(backup)
     }

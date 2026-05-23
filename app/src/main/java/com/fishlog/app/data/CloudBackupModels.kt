@@ -1,5 +1,7 @@
 package com.fishlog.app.data
 
+import kotlinx.serialization.Serializable
+
 enum class AccountStatus {
     SIGNED_OUT,
     WAITING_FOR_CODE,
@@ -44,4 +46,28 @@ data class CloudBackupDiagnosticResult(
     val canRead: Boolean,
     val canDeleteTestFile: Boolean,
     val message: String
+)
+
+@Serializable
+data class CloudPhotoBackupItem(
+    val localUuid: String,
+    val originalPhotoUri: String,
+    val cloudPath: String,
+    val fileName: String,
+    val uploadedAt: Long
+)
+
+data class CloudPhotoRestoreResult(
+    val downloadedCount: Int,
+    val failedCount: Int,
+    val restoredPhotoUris: Map<String, String> // localUuid -> newLocalUri
+)
+
+data class CloudBackupResult(
+    val dataBackedUp: Boolean,
+    val photosFound: Int,
+    val photosUploaded: Int,
+    val photosFailed: Int,
+    val photosIncluded: Boolean,
+    val message: String? = null
 )

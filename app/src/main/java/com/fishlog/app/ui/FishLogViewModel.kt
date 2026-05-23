@@ -133,7 +133,7 @@ class FishLogViewModel(
             lastAttemptAt = appPreferences.getLastCloudBackupAttemptAt(),
             lastFailedAt = appPreferences.getLastCloudBackupFailedAt(),
             lastErrorMessage = lastCloudBackupErrorMessage,
-            photosIncluded = false, // Current JSON backup only includes URIs, not files
+            photosIncluded = true, // Now supports photos
             backupPath = user?.let { "${it.id}/fishlog-backup.json" }
         )
     }
@@ -235,19 +235,26 @@ class FishLogViewModel(
     fun backupNow() {
         viewModelScope.launch {
             backupUiState = BackupUiState.BACKUP_IN_PROGRESS
-            backupStatusMessage = "Creating backup..."
+            backupStatusMessage = "Backing up trips, logs, and photos..."
             
             try {
                 val catches = allCatches.value
                 val trips = allTrips.value
-                val json = JsonBackupHelper.createBackup(catches, trips)
+                val photoHelper = PhotoStorageHelper(applicationContext)
                 
-                backupStatusMessage = "Uploading to cloud..."
-                val result = cloudBackupRepository.backupNow(json)
+                val result = cloudBackupRepository.backupNow(catches, trips, photoHelper)
                 
                 if (result.isSuccess) {
+                    val backupResult = result.getOrNull()!!
                     backupUiState = BackupUiState.SUCCESS
-                    backupStatusMessage = "Cloud backup complete."
+                    
+                    val msg = if (backupResult.photosFailed > 0) {
+                        "Backup complete. ${backupResult.photosFailed} photos could not be backed up."
+                    } else {
+                        "Cloud backup complete."
+                    }
+                    backupStatusMessage = msg
+                    
                     val now = System.currentTimeMillis()
                     appPreferences.setLastCloudBackupSuccess(now)
                     appPreferences.clearCloudBackupPending()
@@ -264,6 +271,7 @@ class FishLogViewModel(
                     refreshCloudBackupStatus()
                 }
             } catch (e: Exception) {
+                Log.e("FishLogCloud", "BackupNow failed with exception", e)
                 backupUiState = BackupUiState.ERROR
                 backupStatusMessage = "Could not generate backup file."
             }
@@ -275,19 +283,29 @@ class FishLogViewModel(
             backupUiState = BackupUiState.RESTORE_IN_PROGRESS
             backupStatusMessage = "Downloading from cloud..."
             
-            val result = cloudBackupRepository.restoreFromCloud()
+            val photoHelper = PhotoStorageHelper(applicationContext)
+            val result = cloudBackupRepository.restoreFromCloud(photoHelper) { backup ->
+                // This is called when JSON is parsed but before photos are restored
+                importBackup(backup)
+            }
+
             if (result.isSuccess) {
-                try {
-                    val json = result.getOrNull()!!
-                    val backup = JsonBackupHelper.parseBackup(json)
-                    importBackup(backup) // Reuse existing import logic
-                    backupUiState = BackupUiState.SUCCESS
-                    backupStatusMessage = "Cloud restore complete. Data merged."
-                    refreshCloudBackupStatus()
-                } catch (e: Exception) {
-                    backupUiState = BackupUiState.ERROR
-                    backupStatusMessage = "Downloaded backup is invalid or corrupt."
+                val restoreResult = result.getOrNull()!!
+                
+                // Update local logs with the new photo URIs
+                restoreResult.restoredPhotoUris.forEach { (uuid, newUri) ->
+                    catchLogDao.updatePhotoUriByUuid(uuid, newUri)
                 }
+
+                backupUiState = BackupUiState.SUCCESS
+                
+                val msg = if (restoreResult.failedCount > 0) {
+                    "Restore complete. ${restoreResult.failedCount} photos could not be restored."
+                } else {
+                    "Cloud restore complete. Data and photos merged."
+                }
+                backupStatusMessage = msg
+                refreshCloudBackupStatus()
             } else {
                 backupUiState = BackupUiState.ERROR
                 backupStatusMessage = result.exceptionOrNull()?.message ?: "Restore failed"

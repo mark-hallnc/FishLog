@@ -26,5 +26,8 @@ interface CatchLogDao {
 
     @Query("UPDATE catch_logs SET tripId = NULL WHERE tripId = :tripId")
     suspend fun clearTripIdForLogs(tripId: Long)
+
+    @Query("UPDATE catch_logs SET photoUri = :photoUri WHERE localUuid = :localUuid")
+    suspend fun updatePhotoUriByUuid(localUuid: String, photoUri: String)
 }
 

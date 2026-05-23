@@ -40,6 +40,28 @@ class PhotoStorageHelper(private val context: Context) {
         }
     }
 
+    fun savePhotoBytes(bytes: ByteArray, fileName: String): String? {
+        return try {
+            val destFile = File(photosDir, fileName)
+            destFile.writeBytes(bytes)
+            Uri.fromFile(destFile).toString()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun getPhotoFile(uriString: String?): File? {
+        if (uriString == null) return null
+        return try {
+            val uri = Uri.parse(uriString)
+            val file = File(uri.path ?: return null)
+            if (file.exists()) file else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun deletePhoto(uriString: String?) {
         if (uriString == null) return
         try {
