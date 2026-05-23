@@ -45,6 +45,8 @@ fun SettingsScreen(
     onMapCenterModeChange: (String) -> Unit,
     onClearDefaultMapLocation: () -> Unit,
     onChooseDefaultMapLocation: () -> Unit,
+    onViewWelcomeGuide: () -> Unit,
+    onResetWelcomeScreen: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -417,6 +419,15 @@ fun SettingsScreen(
                     subtitle = mapCenterLabel,
                     helperText = mapCenterHelper,
                     onClick = { showMapCenterDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                
+                SettingRow(
+                    icon = Icons.Default.Info,
+                    title = "Welcome Guide",
+                    subtitle = "View again",
+                    helperText = "Review how FishLog works and privacy details.",
+                    onClick = onViewWelcomeGuide
                 )
             }
 
@@ -815,6 +826,19 @@ fun SettingsScreen(
                     ) {
                         Text("Clear Sample Data", fontSize = 12.sp)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        onResetWelcomeScreen()
+                        scope.launch { snackbarHostState.showSnackbar("Welcome screen reset. It will appear on next launch.") }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Reset Welcome Screen", fontSize = 12.sp)
                 }
             }
 

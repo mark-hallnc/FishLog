@@ -49,6 +49,7 @@ import com.fishlog.app.ui.SettingsScreen
 import com.fishlog.app.ui.AdvancedAnalyticsScreen
 import com.fishlog.app.ui.AdvancedReportsScreen
 import com.fishlog.app.ui.TripReviewScreen
+import com.fishlog.app.ui.FirstRunScreen
 import com.fishlog.app.ui.PatternDetailScreen
 import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
@@ -181,8 +182,12 @@ fun MainScreen(
     onClearDefaultMapLocation: () -> Unit
 ) {
     val context = LocalContext.current
+    val appPreferences = remember { AppPreferences(context) }
     val photoStorageHelper = remember { PhotoStorageHelper(context) }
-    var currentScreen by remember { mutableStateOf("Home") }
+    var currentScreen by remember { 
+        mutableStateOf(if (appPreferences.hasSeenFirstRun()) "Home" else "FirstRun") 
+    }
+    var isFirstRunViewAgain by remember { mutableStateOf(false) }
     var previousScreen by remember { mutableStateOf("Home") }
     var previousTripScreen by remember { mutableStateOf("Home") }
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
@@ -208,6 +213,19 @@ fun MainScreen(
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         val modifier = Modifier.padding(innerPadding)
         when (currentScreen) {
+            "FirstRun" -> FirstRunScreen(
+                isViewAgain = isFirstRunViewAgain,
+                modifier = modifier,
+                onGetStarted = {
+                    if (!isFirstRunViewAgain) {
+                        appPreferences.setHasSeenFirstRun(true)
+                        currentScreen = "Home"
+                    } else {
+                        isFirstRunViewAgain = false
+                        currentScreen = "Settings"
+                    }
+                }
+            )
             "Home" -> HomeScreen(
                 viewModel = viewModel,
                 onLogCatchClick = { 
@@ -515,6 +533,13 @@ fun MainScreen(
                 onMapCenterModeChange = onMapCenterModeChange,
                 onClearDefaultMapLocation = onClearDefaultMapLocation,
                 onChooseDefaultMapLocation = { currentScreen = "MapLocationPicker" },
+                onViewWelcomeGuide = {
+                    isFirstRunViewAgain = true
+                    currentScreen = "FirstRun"
+                },
+                onResetWelcomeScreen = {
+                    appPreferences.setHasSeenFirstRun(false)
+                },
                 onBack = { currentScreen = "Home" }
             )
         }

@@ -9,6 +9,7 @@ class AppPreferences(context: Context) {
     companion object {
         private const val KEY_APPEARANCE_MODE = "appearance_mode"
         private const val KEY_UNIT_SYSTEM = "unit_system"
+        private const val KEY_HAS_SEEN_FIRST_RUN = "has_seen_first_run"
 
         const val MODE_FOLLOW_SYSTEM = "FOLLOW_SYSTEM"
         const val MODE_LIGHT = "LIGHT"
@@ -45,6 +46,14 @@ class AppPreferences(context: Context) {
 
     fun setUnitSystem(system: String) {
         prefs.edit().putString(KEY_UNIT_SYSTEM, system).apply()
+    }
+
+    fun hasSeenFirstRun(): Boolean {
+        return prefs.getBoolean(KEY_HAS_SEEN_FIRST_RUN, false)
+    }
+
+    fun setHasSeenFirstRun(value: Boolean) {
+        prefs.edit().putBoolean(KEY_HAS_SEEN_FIRST_RUN, value).apply()
     }
 
     fun getMapCenterMode(): String {
