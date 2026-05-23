@@ -345,8 +345,7 @@ fun CatchFormScreen(
                                                 weightOunces = it
                                             }
                                         },
-                                        label = { Text("oz") },
-                                        modifier = Modifier.weight(1f),
+                                        label = { Text("oz") },                                        modifier = Modifier.weight(1f),
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         shape = RoundedCornerShape(12.dp)
                                     )

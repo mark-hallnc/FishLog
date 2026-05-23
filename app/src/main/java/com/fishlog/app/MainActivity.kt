@@ -48,6 +48,7 @@ import com.fishlog.app.ui.EditTripScreen
 import com.fishlog.app.ui.SettingsScreen
 import com.fishlog.app.ui.AdvancedAnalyticsScreen
 import com.fishlog.app.ui.AdvancedReportsScreen
+import com.fishlog.app.ui.TripReviewScreen
 import com.fishlog.app.ui.PatternDetailScreen
 import com.fishlog.app.ui.PhotoViewerScreen
 import com.fishlog.app.ui.theme.FishLogTheme
@@ -420,6 +421,9 @@ fun MainScreen(
                 onViewReports = { filters ->
                     selectedReportFilters = filters
                     currentScreen = "AdvancedReports"
+                },
+                onViewTripReview = {
+                    currentScreen = "TripReview"
                 }
             )
             "AdvancedReports" -> {
@@ -446,6 +450,15 @@ fun MainScreen(
                         previousScreen = "AdvancedReports"
                         currentScreen = "PatternDetail"
                     }
+                )
+            }
+            "TripReview" -> {
+                val catches by viewModel.allCatches.collectAsState()
+                val trips by viewModel.allTrips.collectAsState()
+                TripReviewScreen(
+                    trips = trips,
+                    allLogs = catches,
+                    onBack = { currentScreen = "AdvancedAnalytics" }
                 )
             }
             "PatternDetail" -> selectedPatternInsight?.let { insight ->

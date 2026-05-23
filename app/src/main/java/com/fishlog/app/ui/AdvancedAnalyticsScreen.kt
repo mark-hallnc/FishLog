@@ -33,7 +33,8 @@ fun AdvancedAnalyticsScreen(
     viewModel: FishLogViewModel,
     onBack: () -> Unit,
     onInsightClick: (PatternInsight) -> Unit,
-    onViewReports: (PatternEngineFilters) -> Unit
+    onViewReports: (PatternEngineFilters) -> Unit,
+    onViewTripReview: () -> Unit
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
@@ -143,10 +144,11 @@ fun AdvancedAnalyticsScreen(
                 onClick = { onViewReports(filters) }
             )
 
-            AnalyticsPlaceholderCard(
-                title = "AI Trip Review",
-                description = "Generate plain-English summaries of what worked and what did not.",
-                icon = Icons.Default.AutoAwesome
+            AnalyticsActionCard(
+                title = "Trip Review",
+                description = "Local summaries of completed trips based on your catches, no-catches, weather, moon, and patterns.",
+                icon = Icons.Default.AutoAwesome,
+                onClick = { onViewTripReview() }
             )
 
             AnalyticsPlaceholderCard(
