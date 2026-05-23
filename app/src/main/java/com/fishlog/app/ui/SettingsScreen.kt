@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.fishlog.app.data.*
 import com.fishlog.app.billing.FeatureGate
 import com.fishlog.app.billing.PaidFeature
+import com.fishlog.app.util.FormatUtils
 import kotlinx.coroutines.launch
 import java.io.BufferedWriter
 import java.io.OutputStream
@@ -69,7 +71,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
             title = { Text("Restore from Cloud?") },
-            text = { Text("This will restore your FishLog data from your cloud backup. Your current local data will be merged with the cloud data. Consider exporting a local backup first.") },
+            text = { Text("FishLog will download your cloud backup and restore it on this device. Your current local data will be merged with the cloud data. Duplicates will be skipped. Consider exporting a local backup first if you want a safety copy.") },
             confirmButton = {
                 TextButton(onClick = {
                     showRestoreConfirm = false
@@ -543,11 +545,108 @@ fun SettingsScreen(
                         }
                         
                         Text(
-                            text = "Cloud backup and restore will protect your logs in the event of a lost or damaged device. Photos are not backed up on the cloud at this time.",
+                            text = "Cloud backup and restore will protect your logs in the event of a lost or damaged device.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(top = 8.dp)
                         )
+
+                        // --- NEW STATUS AREA ---
+                        val status = viewModel.cloudBackupStatus
+                        if (status != null) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            val statusLabel = when {
+                                !status.isSignedIn -> "Signed Out"
+                                status.isBackingUp -> "Backing up..."
+                                status.lastErrorMessage != null -> "Backup Failed"
+                                status.isPending -> "Backup Pending"
+                                else -> "Up to date"
+                            }
+                            
+                            val statusColor = when {
+                                !status.isSignedIn -> Color.Gray
+                                status.isBackingUp -> MaterialTheme.colorScheme.primary
+                                status.lastErrorMessage != null -> MaterialTheme.colorScheme.error
+                                status.isPending -> Color(0xFFFFA000)
+                                else -> Color(0xFF4CAF50)
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(8.dp).background(statusColor, CircleShape))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = statusLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusColor
+                                )
+                            }
+
+                            if (status.isSignedIn) {
+                                Text(
+                                    text = "Signed in as: ${status.email}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                status.lastBackupAt?.let { lastAt ->
+                                    val dateStr = SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(lastAt))
+                                    Text(
+                                        text = "Last backup: $dateStr",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } ?: run {
+                                    if (status.lastErrorMessage == null) {
+                                        Text("No cloud backup yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                
+                                if (status.lastErrorMessage != null) {
+                                    Text(
+                                        text = "Last error: ${status.lastErrorMessage}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                                
+                                status.backupPath?.let {
+                                    Text(
+                                        text = "Path: $it",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
+                            
+                            Text(
+                                text = if (status.photosIncluded) "Photos: Included" else "Photos: Not included in cloud backup yet",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                            
+                            if (status.isSignedIn) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.testCloudBackupSetup { result ->
+                                            scope.launch { snackbarHostState.showSnackbar(result) }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    enabled = viewModel.backupUiState == BackupUiState.IDLE
+                                ) {
+                                    Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Test Cloud Connection")
+                                }
+                            }
+                        }
+                        // --- END STATUS AREA ---
 
                         // Backup Mode Selection
                         Text(
@@ -658,7 +757,7 @@ fun SettingsScreen(
                             OutlinedTextField(
                                 value = code,
                                 onValueChange = { code = it },
-                                label = { Text("6-digit Code") },
+                                label = { Text("8-digit Code") },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,

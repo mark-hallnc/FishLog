@@ -8,7 +8,6 @@ import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -232,6 +231,100 @@ class CloudBackupRepository(context: Context) {
                 else -> 
                     Result.failure(Exception("Cloud restore failed. Your local data was not changed."))
             }
+        }
+    }
+
+    /**
+     * Diagnostic tool to check if cloud backup is correctly configured for the current user.
+     */
+    suspend fun testCloudBackupSetup(): Result<CloudBackupDiagnosticResult> = withContext(Dispatchers.IO) {
+        try {
+            if (!SupabaseClientProvider.isConfigured()) {
+                return@withContext Result.failure(Exception("Supabase is not configured."))
+            }
+
+            val user = SupabaseClientProvider.client.auth.currentUserOrNull()
+                ?: return@withContext Result.success(CloudBackupDiagnosticResult(
+                    signedIn = false,
+                    bucketReachable = false,
+                    canUpload = false,
+                    canRead = false,
+                    canDeleteTestFile = false,
+                    message = "Please sign in before testing cloud backup."
+                ))
+
+            val testPath = "${user.id}/diagnostics/test-backup-check.json"
+            val bucket = SupabaseClientProvider.client.storage.from(BUCKET_NAME)
+            val testData = "{\"test\":true,\"createdAt\":${System.currentTimeMillis()}}"
+
+            Log.d(TAG, "Starting cloud backup diagnostic for user: ${user.id}")
+
+            // 1. Test Upload
+            try {
+                bucket.upload(testPath, testData.toByteArray()) {
+                    upsert = true
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Diagnostic upload failed", e)
+                return@withContext Result.success(CloudBackupDiagnosticResult(
+                    signedIn = true,
+                    bucketReachable = false,
+                    canUpload = false,
+                    canRead = false,
+                    canDeleteTestFile = false,
+                    message = "Cloud backup is not set up correctly yet (Upload failed)."
+                ))
+            }
+
+            // 2. Test Read
+            var readBackWorks = false
+            try {
+                val bytes = bucket.downloadAuthenticated(testPath)
+                if (String(bytes).contains("\"test\":true")) {
+                    readBackWorks = true
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Diagnostic read failed", e)
+            }
+
+            if (!readBackWorks) {
+                return@withContext Result.success(CloudBackupDiagnosticResult(
+                    signedIn = true,
+                    bucketReachable = true,
+                    canUpload = true,
+                    canRead = false,
+                    canDeleteTestFile = false,
+                    message = "Cloud backup is not set up correctly yet (Read failed)."
+                ))
+            }
+
+            // 3. Test Delete (Cleanup)
+            var deleteWorks = false
+            try {
+                bucket.delete(listOf(testPath))
+                deleteWorks = true
+            } catch (e: Exception) {
+                Log.e(TAG, "Diagnostic delete failed", e)
+            }
+
+            val finalMsg = if (deleteWorks) {
+                "Cloud backup setup looks good."
+            } else {
+                "Upload/read works. Test file cleanup failed."
+            }
+
+            Result.success(CloudBackupDiagnosticResult(
+                signedIn = true,
+                bucketReachable = true,
+                canUpload = true,
+                canRead = true,
+                canDeleteTestFile = deleteWorks,
+                message = finalMsg
+            ))
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Cloud diagnostic encountered an error", e)
+            Result.failure(Exception("Could not reach cloud backup. Check your connection and try again."))
         }
     }
 }

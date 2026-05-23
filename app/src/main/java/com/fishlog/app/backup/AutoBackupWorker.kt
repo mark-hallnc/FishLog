@@ -64,7 +64,7 @@ class AutoBackupWorker(
                     androidx.work.ListenableWorker.Result.success()
                 } else {
                     // transient failure
-                    prefs.setLastCloudBackupFailure(System.currentTimeMillis(), "Backup failed. Retrying later.")
+                    prefs.setLastCloudBackupFailure(System.currentTimeMillis(), error)
                     androidx.work.ListenableWorker.Result.retry()
                 }
             }

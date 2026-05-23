@@ -844,26 +844,22 @@ fun CloudBackupStatusChip(
     viewModel: FishLogViewModel,
     onClick: () -> Unit
 ) {
-    val status = viewModel.accountStatus
-    val mode = viewModel.cloudBackupMode
-    val isPending = viewModel.cloudBackupPending
-    val isError = viewModel.lastCloudBackupErrorMessage != null
-    val isBackingUp = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS
+    val status = viewModel.cloudBackupStatus ?: return
 
     val (label, color, icon) = when {
-        status == AccountStatus.SIGNED_OUT -> {
+        !status.isSignedIn -> {
             Triple("Cloud Off", Color.Gray, Icons.Default.CloudOff)
         }
-        isBackingUp -> {
+        status.isBackingUp -> {
             Triple("Backing Up...", MaterialTheme.colorScheme.primary, Icons.Default.CloudUpload)
         }
-        isError -> {
+        status.lastErrorMessage != null -> {
             Triple("Backup Failed", MaterialTheme.colorScheme.error, Icons.Default.CloudOff)
         }
-        mode == AppPreferences.CLOUD_BACKUP_MODE_MANUAL -> {
+        !status.isAutomatic -> {
             Triple("Manual Backup", Color.Gray, Icons.Default.Cloud)
         }
-        isPending -> {
+        status.isPending -> {
             Triple("Backup Pending", Color(0xFFFFA000), Icons.Default.CloudSync)
         }
         else -> {
