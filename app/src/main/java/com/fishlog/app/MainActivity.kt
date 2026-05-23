@@ -127,6 +127,9 @@ class MainActivity : ComponentActivity() {
             var mapDefaultLon by remember { mutableStateOf(appPreferences.getMapLongitude()) }
             var mapDefaultZoom by remember { mutableStateOf(appPreferences.getMapZoom()) }
 
+            var activeTripReminderEnabled by remember { mutableStateOf(appPreferences.isActiveTripReminderEnabled()) }
+            var activeTripReminderDelay by remember { mutableStateOf(appPreferences.getActiveTripReminderDelayHours()) }
+
             val darkTheme = when (appearanceMode) {
                 AppPreferences.MODE_LIGHT -> false
                 AppPreferences.MODE_DARK -> true
@@ -142,6 +145,8 @@ class MainActivity : ComponentActivity() {
                     mapDefaultLat = mapDefaultLat,
                     mapDefaultLon = mapDefaultLon,
                     mapDefaultZoom = mapDefaultZoom,
+                    activeTripReminderEnabled = activeTripReminderEnabled,
+                    activeTripReminderDelay = activeTripReminderDelay,
                     onAppearanceModeChange = { mode ->
                         appearanceMode = mode
                         appPreferences.setAppearanceMode(mode)
@@ -164,6 +169,11 @@ class MainActivity : ComponentActivity() {
                         mapDefaultLat = null
                         mapDefaultLon = null
                         appPreferences.clearSavedMapLocation()
+                    },
+                    onActiveTripReminderChange = { enabled, delay ->
+                        activeTripReminderEnabled = enabled
+                        activeTripReminderDelay = delay
+                        viewModel.updateActiveTripReminder(enabled, delay)
                     }
                 )
             }
@@ -180,11 +190,14 @@ fun MainScreen(
     mapDefaultLat: Double?,
     mapDefaultLon: Double?,
     mapDefaultZoom: Double,
+    activeTripReminderEnabled: Boolean,
+    activeTripReminderDelay: Int,
     onAppearanceModeChange: (String) -> Unit,
     onUnitSystemChange: (String) -> Unit,
     onMapCenterModeChange: (String) -> Unit,
     onSetDefaultMapLocation: (Double, Double, Double) -> Unit,
-    onClearDefaultMapLocation: () -> Unit
+    onClearDefaultMapLocation: () -> Unit,
+    onActiveTripReminderChange: (Boolean, Int) -> Unit
 ) {
     val context = LocalContext.current
     val appPreferences = remember { AppPreferences(context) }
@@ -232,7 +245,7 @@ fun MainScreen(
                 }
             )
             "Home" -> HomeScreen(
-                viewModel = viewModel,
+                fishLogViewModel = viewModel,
                 onLogCatchClick = { 
                     selectedCatch = null
                     currentScreen = "Form" 
@@ -534,6 +547,8 @@ fun MainScreen(
                 mapCenterMode = mapCenterMode,
                 mapDefaultLat = mapDefaultLat,
                 mapDefaultLon = mapDefaultLon,
+                activeTripReminderEnabled = activeTripReminderEnabled,
+                activeTripReminderDelay = activeTripReminderDelay,
                 onAppearanceModeChange = onAppearanceModeChange,
                 onUnitSystemChange = onUnitSystemChange,
                 onMapCenterModeChange = onMapCenterModeChange,
@@ -546,6 +561,9 @@ fun MainScreen(
                 onResetWelcomeScreen = {
                     appPreferences.setHasSeenFirstRun(false)
                 },
+                onActiveTripReminderChange = { enabled, delay ->
+                    viewModel.updateActiveTripReminder(enabled, delay)
+                },
                 onBack = { currentScreen = "Home" }
             )
         }
@@ -554,7 +572,7 @@ fun MainScreen(
 
 @Composable
 fun HomeScreen(
-    viewModel: FishLogViewModel,
+    fishLogViewModel: FishLogViewModel,
     onLogCatchClick: () -> Unit,
     onLogNoCatchClick: () -> Unit,
     onHistoryClick: () -> Unit,
@@ -569,9 +587,9 @@ fun HomeScreen(
     onBackupStatusClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val activeTrip by viewModel.activeTrip.collectAsState()
-    val catches by viewModel.allCatches.collectAsState()
-    val trips by viewModel.allTrips.collectAsState()
+    val activeTrip by fishLogViewModel.activeTrip.collectAsState()
+    val catches by fishLogViewModel.allCatches.collectAsState()
+    val trips by fishLogViewModel.allTrips.collectAsState()
 
     val catchPhotos = remember(catches) {
         catches.filter { it.logType == "CATCH" && !it.photoUri.isNullOrBlank() }.map { it.photoUri!! }
@@ -680,7 +698,7 @@ fun HomeScreen(
                 ) {
                     // Backup Status Chip
                     CloudBackupStatusChip(
-                        viewModel = viewModel,
+                        fishLogViewModel = fishLogViewModel,
                         onClick = onBackupStatusClick
                     )
                     
@@ -743,13 +761,14 @@ fun HomeScreen(
                 onStartTrip = onStartTripClick,
                 onEndTrip = {
                     activeTrip?.let { trip ->
-                        viewModel.endTrip(trip)
+                        fishLogViewModel.endTrip(trip)
                         onEndTripClick(trip)
                     }
                 },
                 onViewTrip = { activeTrip?.let { onViewTripClick(it) } },
                 onLogCatch = onLogCatchClick,
-                onLogNoCatch = onLogNoCatchClick
+                onLogNoCatch = onLogNoCatchClick,
+                fishLogViewModel = fishLogViewModel
             )
         }
 
@@ -841,10 +860,10 @@ fun HomeScreen(
 
 @Composable
 fun CloudBackupStatusChip(
-    viewModel: FishLogViewModel,
+    fishLogViewModel: FishLogViewModel,
     onClick: () -> Unit
 ) {
-    val status = viewModel.cloudBackupStatus ?: return
+    val status = fishLogViewModel.cloudBackupStatus ?: return
 
     val (label, color, icon) = when {
         !status.isSignedIn -> {
@@ -919,7 +938,8 @@ fun TripStatusCard(
     onEndTrip: suspend () -> Unit,
     onViewTrip: () -> Unit,
     onLogCatch: () -> Unit = {},
-    onLogNoCatch: () -> Unit = {}
+    onLogNoCatch: () -> Unit = {},
+    fishLogViewModel: FishLogViewModel
 ) {
     var isEndingTrip by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -1013,6 +1033,15 @@ fun TripStatusCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
+                        if (fishLogViewModel.appPreferences.isActiveTripReminderEnabled()) {
+                            Text(
+                                text = "Reminder after ${fishLogViewModel.appPreferences.getActiveTripReminderDelayHours()}h",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
                     
                     IconButton(

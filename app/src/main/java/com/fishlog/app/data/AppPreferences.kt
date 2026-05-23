@@ -29,6 +29,8 @@ class AppPreferences(context: Context) {
         private const val KEY_LAST_CLOUD_BACKUP_FAILED_AT = "last_cloud_backup_failed_at"
         private const val KEY_LAST_CLOUD_BACKUP_ERROR_MESSAGE = "last_cloud_backup_error_message"
         private const val KEY_LAST_LOCAL_DATA_CHANGED_AT = "last_local_data_changed_at"
+        private const val KEY_REMINDER_ENABLED = "active_trip_reminder_enabled"
+        private const val KEY_REMINDER_DELAY = "active_trip_reminder_delay_hours"
 
         const val MAP_CENTER_CURRENT = "CURRENT_LOCATION"
         const val MAP_CENTER_SAVED = "SAVED_LOCATION"
@@ -113,6 +115,22 @@ class AppPreferences(context: Context) {
     fun getLastLocalDataChangedAt(): Long? {
         val at = prefs.getLong(KEY_LAST_LOCAL_DATA_CHANGED_AT, 0L)
         return if (at == 0L) null else at
+    }
+
+    fun isActiveTripReminderEnabled(): Boolean {
+        return prefs.getBoolean(KEY_REMINDER_ENABLED, false)
+    }
+
+    fun setActiveTripReminderEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_REMINDER_ENABLED, enabled).apply()
+    }
+
+    fun getActiveTripReminderDelayHours(): Int {
+        return prefs.getInt(KEY_REMINDER_DELAY, 6)
+    }
+
+    fun setActiveTripReminderDelayHours(hours: Int) {
+        prefs.edit().putInt(KEY_REMINDER_DELAY, hours).apply()
     }
 
     fun getAppearanceMode(): String {

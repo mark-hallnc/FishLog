@@ -43,6 +43,8 @@ fun SettingsScreen(
     mapCenterMode: String,
     mapDefaultLat: Double?,
     mapDefaultLon: Double?,
+    activeTripReminderEnabled: Boolean,
+    activeTripReminderDelay: Int,
     onAppearanceModeChange: (String) -> Unit,
     onUnitSystemChange: (String) -> Unit,
     onMapCenterModeChange: (String) -> Unit,
@@ -50,6 +52,7 @@ fun SettingsScreen(
     onChooseDefaultMapLocation: () -> Unit,
     onViewWelcomeGuide: () -> Unit,
     onResetWelcomeScreen: () -> Unit,
+    onActiveTripReminderChange: (Boolean, Int) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -172,6 +175,65 @@ fun SettingsScreen(
     var showAppearanceDialog by remember { mutableStateOf(false) }
     var showUnitDialog by remember { mutableStateOf(false) }
     var showMapCenterDialog by remember { mutableStateOf(false) }
+    var showReminderDialog by remember { mutableStateOf(false) }
+
+    if (showReminderDialog) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Notification permission denied. Reminders will not be shown.")
+                }
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showReminderDialog = false },
+            title = { Text("Active Trip Reminder") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "FishLog can remind you if a trip is still active after a while. This helps keep trip duration and analytics accurate.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    val options = listOf(
+                        "Off" to 0,
+                        "After 4 hours" to 4,
+                        "After 6 hours" to 6,
+                        "After 8 hours" to 8,
+                        "After 12 hours" to 12
+                    )
+
+                    options.forEach { (label, hours) ->
+                        val selected = if (hours == 0) !activeTripReminderEnabled else activeTripReminderEnabled && activeTripReminderDelay == hours
+                        AppearanceOption(
+                            label = label,
+                            selected = selected,
+                            onClick = {
+                                if (hours == 0) {
+                                    onActiveTripReminderChange(false, activeTripReminderDelay)
+                                } else {
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                    onActiveTripReminderChange(true, hours)
+                                }
+                                showReminderDialog = false
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showReminderDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
 
     if (showMapCenterDialog) {
         AlertDialog(
@@ -422,6 +484,16 @@ fun SettingsScreen(
                     subtitle = mapCenterLabel,
                     helperText = mapCenterHelper,
                     onClick = { showMapCenterDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
+                val reminderSubtitle = if (activeTripReminderEnabled) "After $activeTripReminderDelay hours" else "Off"
+                SettingRow(
+                    icon = Icons.Default.Notifications,
+                    title = "Active Trip Reminder",
+                    subtitle = reminderSubtitle,
+                    helperText = "Avoid leaving trips active accidentally.",
+                    onClick = { showReminderDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 

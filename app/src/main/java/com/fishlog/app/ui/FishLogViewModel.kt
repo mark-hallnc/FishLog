@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fishlog.app.data.*
 import com.fishlog.app.backup.AutoBackupScheduler
+import com.fishlog.app.reminders.ActiveTripReminderScheduler
 import com.fishlog.app.util.WaterBodyNameUtils
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +23,7 @@ class FishLogViewModel(
     private val fishingTripDao: FishingTripDao,
     private val cloudBackupRepository: CloudBackupRepository,
     private val weatherRepository: WeatherRepository,
-    private val appPreferences: AppPreferences,
+    val appPreferences: AppPreferences,
     private val waterBodySuggestionRepository: WaterBodySuggestionRepository? = null
 ) : ViewModel() {
 
@@ -108,6 +109,11 @@ class FishLogViewModel(
                 appPreferences.getCloudBackupPending() && 
                 cloudBackupRepository.isSignedIn()) {
                 AutoBackupScheduler.scheduleAutoBackup(applicationContext)
+            }
+
+            // Active Trip Reminder initial check
+            if (appPreferences.isActiveTripReminderEnabled()) {
+                ActiveTripReminderScheduler.rescheduleIfActiveTripExists(applicationContext)
             }
         }
     }
@@ -472,8 +478,16 @@ class FishLogViewModel(
                 weatherCode = weatherData?.weatherCode,
                 weatherSummary = weatherData?.weatherSummary ?: ""
             )
-            fishingTripDao.insertTrip(trip)
+            val tripId = fishingTripDao.insertTrip(trip)
             markCloudBackupNeeded("start_trip")
+
+            if (appPreferences.isActiveTripReminderEnabled()) {
+                ActiveTripReminderScheduler.scheduleActiveTripReminder(
+                    applicationContext, 
+                    tripId, 
+                    appPreferences.getActiveTripReminderDelayHours()
+                )
+            }
         }
     }
 
@@ -484,6 +498,7 @@ class FishLogViewModel(
             backupStatus = BackupStatus.PENDING_BACKUP
         ))
         markCloudBackupNeeded("end_trip")
+        ActiveTripReminderScheduler.cancelActiveTripReminder(applicationContext)
     }
 
     fun updateTrip(trip: FishingTrip, weatherData: WeatherData? = null) {
@@ -537,6 +552,11 @@ class FishLogViewModel(
             catchLogDao.clearTripIdForLogs(trip.id)
             fishingTripDao.deleteTrip(trip)
             markCloudBackupNeeded("delete_trip")
+            
+            // If it was the active trip, cancel the reminder
+            if (trip.endTime == null) {
+                ActiveTripReminderScheduler.cancelActiveTripReminder(applicationContext)
+            }
         }
     }
 
@@ -696,6 +716,17 @@ class FishLogViewModel(
             photoStorageHelper?.deletePhoto(catchLog.photoUri)
             catchLogDao.deleteCatch(catchLog)
             markCloudBackupNeeded("delete_catch")
+        }
+    }
+
+    fun updateActiveTripReminder(enabled: Boolean, delayHours: Int) {
+        appPreferences.setActiveTripReminderEnabled(enabled)
+        appPreferences.setActiveTripReminderDelayHours(delayHours)
+        
+        if (enabled) {
+            ActiveTripReminderScheduler.rescheduleIfActiveTripExists(applicationContext)
+        } else {
+            ActiveTripReminderScheduler.cancelActiveTripReminder(applicationContext)
         }
     }
 
