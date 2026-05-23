@@ -57,6 +57,8 @@ import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.PhotoStorageHelper
 import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.data.AccountStatus
+import com.fishlog.app.data.BackupUiState
 import com.fishlog.app.analytics.PatternInsight
 import com.fishlog.app.analytics.PatternEngineFilters
 import com.fishlog.app.analytics.PatternType
@@ -98,22 +100,25 @@ class MainActivity : ComponentActivity() {
         val cloudBackupRepository = CloudBackupRepository(applicationContext)
         val weatherRepository = WeatherRepository()
         val waterBodySuggestionRepository = WaterBodySuggestionRepository(applicationContext)
+        val appPreferences = AppPreferences(applicationContext)
+        
         setContent {
             val viewModel: FishLogViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         return FishLogViewModel(
+                            applicationContext,
                             catchDao, 
                             tripDao, 
                             cloudBackupRepository, 
                             weatherRepository,
+                            appPreferences,
                             waterBodySuggestionRepository
                         ) as T
                     }
                 }
             )
 
-            val appPreferences = remember { AppPreferences(applicationContext) }
             var appearanceMode by remember { mutableStateOf(appPreferences.getAppearanceMode()) }
             var unitSystem by remember { mutableStateOf(appPreferences.getUnitSystem()) }
             
@@ -261,6 +266,7 @@ fun MainScreen(
                     selectedTrip = trip.copy(endTime = System.currentTimeMillis())
                     currentScreen = "TripSummary"
                 },
+                onBackupStatusClick = { currentScreen = "Settings" },
                 modifier = modifier
             )
             "StartTrip" -> StartTripScreen(
@@ -560,6 +566,7 @@ fun HomeScreen(
     onStartTripClick: () -> Unit,
     onViewTripClick: (FishingTrip) -> Unit,
     onEndTripClick: (FishingTrip) -> Unit,
+    onBackupStatusClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activeTrip by viewModel.activeTrip.collectAsState()
@@ -671,6 +678,14 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
+                    // Backup Status Chip
+                    CloudBackupStatusChip(
+                        viewModel = viewModel,
+                        onClick = onBackupStatusClick
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = "FishLog",
                         style = MaterialTheme.typography.displayMedium.copy(
@@ -820,6 +835,64 @@ fun HomeScreen(
                     onClick = onAdvancedAnalyticsClick
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun CloudBackupStatusChip(
+    viewModel: FishLogViewModel,
+    onClick: () -> Unit
+) {
+    val status = viewModel.accountStatus
+    val mode = viewModel.cloudBackupMode
+    val isPending = viewModel.cloudBackupPending
+    val isError = viewModel.lastCloudBackupErrorMessage != null
+    val isBackingUp = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS
+
+    val (label, color, icon) = when {
+        status == AccountStatus.SIGNED_OUT -> {
+            Triple("Cloud Off", Color.Gray, Icons.Default.CloudOff)
+        }
+        isBackingUp -> {
+            Triple("Backing Up...", MaterialTheme.colorScheme.primary, Icons.Default.CloudUpload)
+        }
+        isError -> {
+            Triple("Backup Failed", MaterialTheme.colorScheme.error, Icons.Default.CloudOff)
+        }
+        mode == AppPreferences.CLOUD_BACKUP_MODE_MANUAL -> {
+            Triple("Manual Backup", Color.Gray, Icons.Default.Cloud)
+        }
+        isPending -> {
+            Triple("Backup Pending", Color(0xFFFFA000), Icons.Default.CloudSync)
+        }
+        else -> {
+            Triple("Auto Backup On", Color(0xFF4CAF50), Icons.Default.CloudDone)
+        }
+    }
+
+    Surface(
+        onClick = onClick,
+        color = color.copy(alpha = 0.15f),
+        contentColor = color,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.padding(bottom = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

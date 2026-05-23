@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -542,10 +543,48 @@ fun SettingsScreen(
                         }
                         
                         Text(
-                            text = "Optional cloud backup and restore will protect your logs in the event of a lost or damaged device. Photos are not backed up on the cloud at this time - on restore all trip/log data will be restored but photos will not.",
+                            text = "Cloud backup and restore will protect your logs in the event of a lost or damaged device. Photos are not backed up on the cloud at this time.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp)
+                        )
+
+                        // Backup Mode Selection
+                        Text(
+                            text = "Backup Mode",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_MANUAL,
+                                onClick = { viewModel.updateCloudBackupMode(AppPreferences.CLOUD_BACKUP_MODE_MANUAL) },
+                                label = { Text("Manual") },
+                                leadingIcon = { if (viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_MANUAL) Icon(Icons.Default.Check, null, Modifier.size(16.dp)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC,
+                                onClick = { viewModel.updateCloudBackupMode(AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC) },
+                                label = { Text("Automatic") },
+                                leadingIcon = { if (viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC) Icon(Icons.Default.Check, null, Modifier.size(16.dp)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Text(
+                            text = if (viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC)
+                                "Automatic backup saves your latest data to the cloud when internet is available. It does not sync across devices automatically."
+                                else "Back up only when you tap Backup Now.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
 
                         if (viewModel.accountStatus == AccountStatus.SIGNED_OUT) {
@@ -675,20 +714,50 @@ fun SettingsScreen(
                                 }
                             }
 
+                            if (viewModel.cloudBackupPending) {
+                                Surface(
+                                    color = Color(0xFFFFA000).copy(alpha = 0.1f),
+                                    contentColor = Color(0xFFFFA000),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CloudSync, null, Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC)
+                                                "Backup pending. Uploading when internet is available."
+                                                else "You have unsaved local changes.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
                             viewModel.lastCloudBackupAt?.let { lastAt ->
                                 val dateStr = SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(lastAt))
                                 Text(
-                                    text = "Last cloud backup: $dateStr",
+                                    text = "Last successful backup: $dateStr",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 8.dp)
+                                    modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             } ?: run {
                                 Text(
                                     text = "No cloud backup yet.",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 8.dp)
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+
+                            viewModel.lastCloudBackupErrorMessage?.let { error ->
+                                Text(
+                                    text = "Last attempt failed: $error",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
 

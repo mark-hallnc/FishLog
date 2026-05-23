@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.osmdroid)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Supabase
     implementation(libs.supabase.auth)

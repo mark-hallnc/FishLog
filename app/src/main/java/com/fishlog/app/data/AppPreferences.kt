@@ -22,14 +22,97 @@ class AppPreferences(context: Context) {
         private const val KEY_MAP_LATITUDE = "map_latitude"
         private const val KEY_MAP_LONGITUDE = "map_longitude"
         private const val KEY_MAP_ZOOM = "map_zoom"
+        private const val KEY_CLOUD_BACKUP_MODE = "cloud_backup_mode"
+        private const val KEY_CLOUD_BACKUP_PENDING = "cloud_backup_pending"
+        private const val KEY_LAST_CLOUD_BACKUP_AT = "last_cloud_backup_at"
+        private const val KEY_LAST_CLOUD_BACKUP_ATTEMPT_AT = "last_cloud_backup_attempt_at"
+        private const val KEY_LAST_CLOUD_BACKUP_FAILED_AT = "last_cloud_backup_failed_at"
+        private const val KEY_LAST_CLOUD_BACKUP_ERROR_MESSAGE = "last_cloud_backup_error_message"
+        private const val KEY_LAST_LOCAL_DATA_CHANGED_AT = "last_local_data_changed_at"
 
         const val MAP_CENTER_CURRENT = "CURRENT_LOCATION"
         const val MAP_CENTER_SAVED = "SAVED_LOCATION"
+
+        const val CLOUD_BACKUP_MODE_MANUAL = "manual"
+        const val CLOUD_BACKUP_MODE_AUTOMATIC = "automatic"
     }
 
     enum class DefaultMapCenterMode {
         CURRENT_LOCATION,
         SAVED_LOCATION
+    }
+
+    fun getCloudBackupMode(): String {
+        return prefs.getString(KEY_CLOUD_BACKUP_MODE, CLOUD_BACKUP_MODE_MANUAL) ?: CLOUD_BACKUP_MODE_MANUAL
+    }
+
+    fun setCloudBackupMode(mode: String) {
+        prefs.edit().putString(KEY_CLOUD_BACKUP_MODE, mode).apply()
+    }
+
+    fun isAutomaticCloudBackupEnabled(): Boolean {
+        return getCloudBackupMode() == CLOUD_BACKUP_MODE_AUTOMATIC
+    }
+
+    fun markCloudBackupPending() {
+        prefs.edit().putBoolean(KEY_CLOUD_BACKUP_PENDING, true).apply()
+    }
+
+    fun clearCloudBackupPending() {
+        prefs.edit().putBoolean(KEY_CLOUD_BACKUP_PENDING, false).apply()
+    }
+
+    fun getCloudBackupPending(): Boolean {
+        return prefs.getBoolean(KEY_CLOUD_BACKUP_PENDING, false)
+    }
+
+    fun setLastCloudBackupSuccess(timestamp: Long) {
+        prefs.edit()
+            .putLong(KEY_LAST_CLOUD_BACKUP_AT, timestamp)
+            .putLong(KEY_LAST_CLOUD_BACKUP_ATTEMPT_AT, timestamp)
+            .remove(KEY_LAST_CLOUD_BACKUP_FAILED_AT)
+            .remove(KEY_LAST_CLOUD_BACKUP_ERROR_MESSAGE)
+            .apply()
+    }
+
+    fun setLastCloudBackupFailure(timestamp: Long, friendlyMessage: String) {
+        prefs.edit()
+            .putLong(KEY_LAST_CLOUD_BACKUP_ATTEMPT_AT, timestamp)
+            .putLong(KEY_LAST_CLOUD_BACKUP_FAILED_AT, timestamp)
+            .putString(KEY_LAST_CLOUD_BACKUP_ERROR_MESSAGE, friendlyMessage)
+            .apply()
+    }
+
+    fun setLastCloudBackupAttempt(timestamp: Long) {
+        prefs.edit().putLong(KEY_LAST_CLOUD_BACKUP_ATTEMPT_AT, timestamp).apply()
+    }
+
+    fun getLastCloudBackupAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_CLOUD_BACKUP_AT, 0L)
+        return if (at == 0L) null else at
+    }
+
+    fun getLastCloudBackupAttemptAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_CLOUD_BACKUP_ATTEMPT_AT, 0L)
+        return if (at == 0L) null else at
+    }
+
+    fun getLastCloudBackupFailedAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_CLOUD_BACKUP_FAILED_AT, 0L)
+        return if (at == 0L) null else at
+    }
+
+    fun getLastCloudBackupErrorMessage(): String? {
+        return prefs.getString(KEY_LAST_CLOUD_BACKUP_ERROR_MESSAGE, null)
+    }
+
+    fun setLastLocalDataChangedAt(timestamp: Long) {
+        prefs.edit().putLong(KEY_LAST_LOCAL_DATA_CHANGED_AT, timestamp).apply()
+    }
+
+    fun getLastLocalDataChangedAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_LOCAL_DATA_CHANGED_AT, 0L)
+        return if (at == 0L) null else at
     }
 
     fun getAppearanceMode(): String {

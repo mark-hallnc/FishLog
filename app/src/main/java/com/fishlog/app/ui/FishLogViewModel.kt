@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fishlog.app.data.*
+import com.fishlog.app.backup.AutoBackupScheduler
 import com.fishlog.app.util.WaterBodyNameUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +16,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class FishLogViewModel(
+    private val applicationContext: android.content.Context,
     private val catchLogDao: CatchLogDao,
     private val fishingTripDao: FishingTripDao,
     private val cloudBackupRepository: CloudBackupRepository,
     private val weatherRepository: WeatherRepository,
+    private val appPreferences: AppPreferences,
     private val waterBodySuggestionRepository: WaterBodySuggestionRepository? = null
 ) : ViewModel() {
 
@@ -27,6 +30,12 @@ class FishLogViewModel(
         private set
     
     var accountEmail by mutableStateOf(cloudBackupRepository.getCurrentAccountEmail())
+        private set
+
+    var cloudBackupMode by mutableStateOf(appPreferences.getCloudBackupMode())
+        private set
+
+    var cloudBackupPending by mutableStateOf(appPreferences.getCloudBackupPending())
         private set
 
     var backupUiState by mutableStateOf(BackupUiState.IDLE)
@@ -38,7 +47,10 @@ class FishLogViewModel(
     var pendingAuthEmail by mutableStateOf<String?>(null)
         private set
 
-    var lastCloudBackupAt by mutableStateOf(cloudBackupRepository.getLastBackupAt())
+    var lastCloudBackupAt by mutableStateOf(appPreferences.getLastCloudBackupAt())
+        private set
+    
+    var lastCloudBackupErrorMessage by mutableStateOf(appPreferences.getLastCloudBackupErrorMessage())
         private set
 
     // Nearby Water Bodies
@@ -81,7 +93,16 @@ class FishLogViewModel(
             cloudBackupRepository.refreshAccountState()
             accountStatus = if (cloudBackupRepository.isSignedIn()) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT
             accountEmail = cloudBackupRepository.getCurrentAccountEmail()
-            lastCloudBackupAt = cloudBackupRepository.getLastBackupAt()
+            lastCloudBackupAt = appPreferences.getLastCloudBackupAt()
+            lastCloudBackupErrorMessage = appPreferences.getLastCloudBackupErrorMessage()
+            cloudBackupMode = appPreferences.getCloudBackupMode()
+            cloudBackupPending = appPreferences.getCloudBackupPending()
+            
+            if (appPreferences.isAutomaticCloudBackupEnabled() && 
+                appPreferences.getCloudBackupPending() && 
+                cloudBackupRepository.isSignedIn()) {
+                AutoBackupScheduler.scheduleAutoBackup(applicationContext)
+            }
         }
     }
 
@@ -115,10 +136,35 @@ class FishLogViewModel(
                 pendingAuthEmail = null
                 backupUiState = BackupUiState.SUCCESS
                 backupStatusMessage = "Code verified. You're signed in."
+                
+                if (appPreferences.isAutomaticCloudBackupEnabled() && appPreferences.getCloudBackupPending()) {
+                    AutoBackupScheduler.runAutoBackupSoon(applicationContext)
+                }
             } else {
                 backupUiState = BackupUiState.ERROR
                 backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not verify code. Try again."
             }
+        }
+    }
+
+    fun updateCloudBackupMode(mode: String) {
+        appPreferences.setCloudBackupMode(mode)
+        cloudBackupMode = mode
+        if (mode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC) {
+            if (appPreferences.getCloudBackupPending() && cloudBackupRepository.isSignedIn()) {
+                AutoBackupScheduler.runAutoBackupSoon(applicationContext)
+            }
+        } else {
+            AutoBackupScheduler.cancelAutoBackup(applicationContext)
+        }
+    }
+
+    fun markCloudBackupNeeded() {
+        appPreferences.markCloudBackupPending()
+        cloudBackupPending = true
+        appPreferences.setLastLocalDataChangedAt(System.currentTimeMillis())
+        if (appPreferences.isAutomaticCloudBackupEnabled() && cloudBackupRepository.isSignedIn()) {
+            AutoBackupScheduler.scheduleAutoBackup(applicationContext)
         }
     }
 
@@ -140,6 +186,7 @@ class FishLogViewModel(
             accountEmail = null
             backupUiState = BackupUiState.IDLE
             backupStatusMessage = null
+            AutoBackupScheduler.cancelAutoBackup(applicationContext)
         }
     }
 
@@ -159,10 +206,18 @@ class FishLogViewModel(
                 if (result.isSuccess) {
                     backupUiState = BackupUiState.SUCCESS
                     backupStatusMessage = "Cloud backup complete."
-                    lastCloudBackupAt = cloudBackupRepository.getLastBackupAt()
+                    val now = System.currentTimeMillis()
+                    appPreferences.setLastCloudBackupSuccess(now)
+                    appPreferences.clearCloudBackupPending()
+                    lastCloudBackupAt = now
+                    cloudBackupPending = false
+                    lastCloudBackupErrorMessage = null
                 } else {
                     backupUiState = BackupUiState.ERROR
-                    backupStatusMessage = result.exceptionOrNull()?.message ?: "Backup failed"
+                    val errorMsg = result.exceptionOrNull()?.message ?: "Backup failed"
+                    backupStatusMessage = errorMsg
+                    appPreferences.setLastCloudBackupFailure(System.currentTimeMillis(), errorMsg)
+                    lastCloudBackupErrorMessage = errorMsg
                 }
             } catch (e: Exception) {
                 backupUiState = BackupUiState.ERROR
@@ -335,6 +390,7 @@ class FishLogViewModel(
                 weatherSummary = weatherData?.weatherSummary ?: ""
             )
             fishingTripDao.insertTrip(trip)
+            markCloudBackupNeeded()
         }
     }
 
@@ -344,6 +400,7 @@ class FishLogViewModel(
             updatedAt = System.currentTimeMillis(),
             backupStatus = BackupStatus.PENDING_BACKUP
         ))
+        markCloudBackupNeeded()
     }
 
     fun updateTrip(trip: FishingTrip, weatherData: WeatherData? = null) {
@@ -387,6 +444,7 @@ class FishLogViewModel(
             }
 
             fishingTripDao.updateTrip(updatedTrip)
+            markCloudBackupNeeded()
         }
     }
 
@@ -395,6 +453,7 @@ class FishLogViewModel(
         viewModelScope.launch {
             catchLogDao.clearTripIdForLogs(trip.id)
             fishingTripDao.deleteTrip(trip)
+            markCloudBackupNeeded()
         }
     }
 
@@ -414,6 +473,7 @@ class FishLogViewModel(
                         ))
                     }
                 }
+            markCloudBackupNeeded()
         }
     }
 
@@ -453,6 +513,7 @@ class FishLogViewModel(
                 longitude = longitude
             )
             catchLogDao.insertCatch(catchLog)
+            markCloudBackupNeeded()
         }
     }
 
@@ -504,6 +565,7 @@ class FishLogViewModel(
                 ))
             }
             catchLogDao.insertAll(logs)
+            markCloudBackupNeeded()
         }
     }
 
@@ -535,12 +597,14 @@ class FishLogViewModel(
                 longitude = longitude
             )
             catchLogDao.insertCatch(noCatchLog)
+            markCloudBackupNeeded()
         }
     }
 
     fun updateCatch(catchLog: CatchLog) {
         viewModelScope.launch {
             catchLogDao.updateCatch(catchLog)
+            markCloudBackupNeeded()
         }
     }
 
@@ -548,6 +612,7 @@ class FishLogViewModel(
         viewModelScope.launch {
             photoStorageHelper?.deletePhoto(catchLog.photoUri)
             catchLogDao.deleteCatch(catchLog)
+            markCloudBackupNeeded()
         }
     }
 
@@ -597,6 +662,7 @@ class FishLogViewModel(
                     catchLogDao.insertCatch(importedCatch)
                 }
             }
+            markCloudBackupNeeded()
         }
     }
 
