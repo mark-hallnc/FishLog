@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.activity.compose.BackHandler
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.delay
@@ -82,6 +83,18 @@ import com.fishlog.app.ui.FishLogViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+enum class NavOrigin {
+    HOME,
+    HISTORY,
+    TRIP_HISTORY,
+    MAP,
+    DETAIL,
+    TRIP_DETAIL,
+    ADVANCED_ANALYTICS,
+    PATTERN_DETAIL,
+    SETTINGS
+}
 
 /**
  * Main entry point for FishLog.
@@ -171,6 +184,7 @@ class MainActivity : ComponentActivity() {
                         appPreferences.clearSavedMapLocation()
                     },
                     onActiveTripReminderChange = { enabled, delay ->
+                        android.util.Log.d("FishLogReminder", "Setting changed: enabled=$enabled, delay=$delay")
                         activeTripReminderEnabled = enabled
                         activeTripReminderDelay = delay
                         viewModel.updateActiveTripReminder(enabled, delay)
@@ -208,6 +222,11 @@ fun MainScreen(
     var isFirstRunViewAgain by remember { mutableStateOf(false) }
     var previousScreen by remember { mutableStateOf("Home") }
     var previousTripScreen by remember { mutableStateOf("Home") }
+    
+    var detailOrigin by remember { mutableStateOf(NavOrigin.HOME) }
+    var tripDetailOrigin by remember { mutableStateOf(NavOrigin.HOME) }
+    var mapOrigin by remember { mutableStateOf(NavOrigin.HOME) }
+
     var selectedCatch by remember { mutableStateOf<CatchLog?>(null) }
     var focusedLogOnMap by remember { mutableStateOf<CatchLog?>(null) }
     var selectedTrip by remember { mutableStateOf<FishingTrip?>(null) }
@@ -227,6 +246,53 @@ fun MainScreen(
     var mapSelectedLogForOverlay by remember { mutableStateOf<CatchLog?>(null) }
 
     val scope = rememberCoroutineScope()
+
+    fun handleBack() {
+        android.util.Log.d("FishLogNav", "Back pressed on screen: $currentScreen")
+        when (currentScreen) {
+            "History", "Map", "Insights", "AdvancedAnalytics", "TripHistory", "Settings", "StartTrip" -> {
+                if (currentScreen == "Map" && mapOrigin == NavOrigin.DETAIL) {
+                    currentScreen = "Detail"
+                    mapOrigin = NavOrigin.HOME
+                } else if (currentScreen == "Map" && mapOrigin == NavOrigin.TRIP_DETAIL) {
+                    currentScreen = "TripDetail"
+                    mapOrigin = NavOrigin.HOME
+                } else {
+                    currentScreen = "Home"
+                }
+            }
+            "Detail" -> {
+                currentScreen = when(detailOrigin) {
+                    NavOrigin.HISTORY -> "History"
+                    NavOrigin.TRIP_DETAIL -> "TripDetail"
+                    NavOrigin.MAP -> "Map"
+                    NavOrigin.PATTERN_DETAIL -> "PatternDetail"
+                    else -> "Home"
+                }
+            }
+            "TripDetail" -> {
+                currentScreen = when(tripDetailOrigin) {
+                    NavOrigin.TRIP_HISTORY -> "TripHistory"
+                    NavOrigin.MAP -> "Map"
+                    NavOrigin.PATTERN_DETAIL -> "PatternDetail"
+                    else -> "Home"
+                }
+            }
+            "PhotoViewer" -> currentScreen = "Detail"
+            "PatternDetail" -> currentScreen = "AdvancedAnalytics"
+            "AdvancedReports", "TripReview" -> currentScreen = "AdvancedAnalytics"
+            "Form" -> currentScreen = if (selectedCatch != null) "Detail" else "Home"
+            "NoCatchForm" -> currentScreen = if (selectedCatch != null) "Detail" else "Home"
+            "EditTrip" -> currentScreen = "TripDetail"
+            "TripSummary" -> currentScreen = "Home"
+            "MapLocationPicker" -> currentScreen = "Settings"
+            else -> { /* Home or FirstRun, let system handle */ }
+        }
+    }
+
+    BackHandler(enabled = currentScreen != "Home" && currentScreen != "FirstRun") {
+        handleBack()
+    }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         val modifier = Modifier.padding(innerPadding)
@@ -255,11 +321,11 @@ fun MainScreen(
                     currentScreen = "NoCatchForm"
                 },
                 onHistoryClick = { 
-                    previousScreen = "Home"
+                    detailOrigin = NavOrigin.HOME
                     currentScreen = "History" 
                 },
                 onMapClick = { 
-                    previousScreen = "Home"
+                    mapOrigin = NavOrigin.HOME
                     focusedLogOnMap = null
                     savedMapReturnState = null
                     mapSelectedLogForOverlay = null
@@ -267,12 +333,15 @@ fun MainScreen(
                 },
                 onInsightsClick = { currentScreen = "Insights" },
                 onAdvancedAnalyticsClick = { currentScreen = "AdvancedAnalytics" },
-                onTripHistoryClick = { currentScreen = "TripHistory" },
+                onTripHistoryClick = { 
+                    tripDetailOrigin = NavOrigin.HOME
+                    currentScreen = "TripHistory" 
+                },
                 onSettingsClick = { currentScreen = "Settings" },
                 onStartTripClick = { currentScreen = "StartTrip" },
                 onViewTripClick = { trip ->
                     selectedTrip = trip
-                    previousTripScreen = "Home"
+                    tripDetailOrigin = NavOrigin.HOME
                     currentScreen = "TripDetail"
                 },
                 onEndTripClick = { trip ->
@@ -284,7 +353,7 @@ fun MainScreen(
             )
             "StartTrip" -> StartTripScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = "Home" },
+                onBack = { handleBack() },
                 onTripStarted = { currentScreen = "Home" }
             )
             "TripDetail" -> selectedTrip?.let { trip ->
@@ -292,10 +361,10 @@ fun MainScreen(
                     trip = trip,
                     viewModel = viewModel,
                     unitSystem = unitSystem,
-                    onBack = { currentScreen = previousTripScreen },
+                    onBack = { handleBack() },
                     onLogClick = { catch ->
                         selectedCatch = catch
-                        previousScreen = "TripDetail"
+                        detailOrigin = NavOrigin.TRIP_DETAIL
                         currentScreen = "Detail"
                     },
                     onLogCatch = {
@@ -323,7 +392,7 @@ fun MainScreen(
                 EditTripScreen(
                     trip = trip,
                     viewModel = viewModel,
-                    onBack = { currentScreen = "TripDetail" },
+                    onBack = { handleBack() },
                     onSave = { updatedTrip ->
                         selectedTrip = updatedTrip
                         currentScreen = "TripDetail"
@@ -333,27 +402,27 @@ fun MainScreen(
             "Form" -> CatchFormScreen(
                 viewModel = viewModel,
                 unitSystem = unitSystem,
-                onBack = { currentScreen = if (selectedCatch != null) "Detail" else "Home" },
+                onBack = { handleBack() },
                 editingCatch = selectedCatch
             )
             "NoCatchForm" -> NoCatchFormScreen(
                 viewModel = viewModel,
                 unitSystem = unitSystem,
-                onBack = { currentScreen = if (selectedCatch != null) "Detail" else "Home" },
+                onBack = { handleBack() },
                 editingLog = selectedCatch
             )
             "History" -> CatchListScreen(
                 viewModel = viewModel,
                 unitSystem = unitSystem,
-                onBack = { currentScreen = "Home" },
+                onBack = { handleBack() },
                 onCatchClick = { catch ->
                     selectedCatch = catch
-                    previousScreen = "History"
+                    detailOrigin = NavOrigin.HISTORY
                     currentScreen = "Detail"
                 },
                 onPhotoClick = { uri ->
                     selectedPhotoUri = uri
-                    previousScreen = "History"
+                    detailOrigin = NavOrigin.HISTORY
                     currentScreen = "PhotoViewer"
                 }
             )
@@ -361,51 +430,47 @@ fun MainScreen(
                 CatchDetailScreen(
                     catch = catch,
                     unitSystem = unitSystem,
-                    onBack = { currentScreen = previousScreen },
+                    onBack = { handleBack() },
                     onEdit = { 
                         currentScreen = if (catch.logType == "NO_CATCH") "NoCatchForm" else "Form"
                     },
                     onDelete = {
                         viewModel.deleteCatch(catch, photoStorageHelper)
-                        currentScreen = previousScreen
+                        handleBack()
                     },
                     onViewOnMap = { log ->
                         selectedCatch = log
                         focusedLogOnMap = log
-                        previousScreen = "Detail"
+                        mapOrigin = NavOrigin.DETAIL
                         savedMapReturnState = null
                         mapSelectedLogForOverlay = log
                         currentScreen = "Map"
                     },
                     onPhotoClick = { uri ->
                         selectedPhotoUri = uri
-                        previousScreen = "Detail"
                         currentScreen = "PhotoViewer"
                     }
                 )
-            } ?: run { currentScreen = previousScreen }
+            } ?: run { currentScreen = "Home" }
             "PhotoViewer" -> selectedPhotoUri?.let { uri ->
                 PhotoViewerScreen(
                     photoUri = uri,
-                    onBack = { currentScreen = previousScreen }
+                    onBack = { handleBack() }
                 )
-            } ?: run { currentScreen = previousScreen }
+            } ?: run { currentScreen = "Home" }
             "Map" -> MapScreen(
                 viewModel = viewModel,
-                onBack = { 
-                    currentScreen = previousScreen
-                    savedMapReturnState = null 
-                },
+                onBack = { handleBack() },
                 onLogClick = { catch, returnState ->
                     selectedCatch = catch
                     savedMapReturnState = returnState
-                    previousScreen = "Map"
+                    detailOrigin = NavOrigin.MAP
                     currentScreen = "Detail"
                 },
                 onTripClick = { trip, returnState ->
                     selectedTrip = trip
                     savedMapReturnState = returnState
-                    previousTripScreen = "Map"
+                    tripDetailOrigin = NavOrigin.MAP
                     currentScreen = "TripDetail"
                 },
                 focusLog = focusedLogOnMap,
@@ -440,19 +505,18 @@ fun MainScreen(
                     onSetDefaultMapLocation(lat, lon, zoom)
                     currentScreen = "Settings"
                 },
-                onBack = { currentScreen = "Settings" }
+                onBack = { handleBack() }
             )
             "Insights" -> InsightsScreen(
                 viewModel = viewModel,
                 unitSystem = unitSystem,
-                onBack = { currentScreen = "Home" }
+                onBack = { handleBack() }
             )
             "AdvancedAnalytics" -> AdvancedAnalyticsScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = "Home" },
+                onBack = { handleBack() },
                 onInsightClick = { insight ->
                     selectedPatternInsight = insight
-                    previousScreen = "AdvancedAnalytics"
                     currentScreen = "PatternDetail"
                 },
                 onViewReports = { filters ->
@@ -470,7 +534,7 @@ fun MainScreen(
                     logs = catches,
                     trips = trips,
                     filters = selectedReportFilters,
-                    onBack = { currentScreen = "AdvancedAnalytics" },
+                    onBack = { handleBack() },
                     onBucketClick = { bucket, category ->
                         selectedPatternInsight = PatternInsight(
                             title = bucket.label,
@@ -484,7 +548,6 @@ fun MainScreen(
                             matchingLogIds = bucket.matchingLogIds,
                             patternType = PatternType.TOP_PATTERN
                         )
-                        previousScreen = "AdvancedReports"
                         currentScreen = "PatternDetail"
                     }
                 )
@@ -495,7 +558,7 @@ fun MainScreen(
                 TripReviewScreen(
                     trips = trips,
                     allLogs = catches,
-                    onBack = { currentScreen = "AdvancedAnalytics" }
+                    onBack = { handleBack() }
                 )
             }
             "PatternDetail" -> selectedPatternInsight?.let { insight ->
@@ -505,25 +568,25 @@ fun MainScreen(
                     insight = insight,
                     allLogs = catches,
                     allTrips = trips,
-                    onBack = { currentScreen = "AdvancedAnalytics" },
+                    onBack = { handleBack() },
                     onLogClick = { log ->
                         selectedCatch = log
-                        previousScreen = "PatternDetail"
+                        detailOrigin = NavOrigin.PATTERN_DETAIL
                         currentScreen = "Detail"
                     },
                     onTripClick = { trip ->
                         selectedTrip = trip
-                        previousTripScreen = "PatternDetail"
+                        tripDetailOrigin = NavOrigin.PATTERN_DETAIL
                         currentScreen = "TripDetail"
                     }
                 )
             } ?: run { currentScreen = "AdvancedAnalytics" }
             "TripHistory" -> TripHistoryScreen(
                 viewModel = viewModel,
-                onBack = { currentScreen = "Home" },
+                onBack = { handleBack() },
                 onTripClick = { trip ->
                     selectedTrip = trip
-                    previousTripScreen = "TripHistory"
+                    tripDetailOrigin = NavOrigin.TRIP_HISTORY
                     currentScreen = "TripDetail"
                 },
                 onStartTripClick = { currentScreen = "StartTrip" }
@@ -535,7 +598,7 @@ fun MainScreen(
                     unitSystem = unitSystem,
                     onDone = { currentScreen = "Home" },
                     onViewDetails = { 
-                        previousTripScreen = "Home"
+                        tripDetailOrigin = NavOrigin.HOME
                         currentScreen = "TripDetail" 
                     }
                 )
@@ -561,10 +624,8 @@ fun MainScreen(
                 onResetWelcomeScreen = {
                     appPreferences.setHasSeenFirstRun(false)
                 },
-                onActiveTripReminderChange = { enabled, delay ->
-                    viewModel.updateActiveTripReminder(enabled, delay)
-                },
-                onBack = { currentScreen = "Home" }
+                onActiveTripReminderChange = onActiveTripReminderChange,
+                onBack = { handleBack() }
             )
         }
     }

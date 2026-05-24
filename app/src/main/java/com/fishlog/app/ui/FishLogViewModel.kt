@@ -720,12 +720,15 @@ class FishLogViewModel(
     }
 
     fun updateActiveTripReminder(enabled: Boolean, delayHours: Int) {
+        android.util.Log.d("FishLogReminder", "Updating prefs: enabled=$enabled, delay=$delayHours")
         appPreferences.setActiveTripReminderEnabled(enabled)
         appPreferences.setActiveTripReminderDelayHours(delayHours)
         
         if (enabled) {
+            android.util.Log.d("FishLogReminder", "Rescheduling reminder")
             ActiveTripReminderScheduler.rescheduleIfActiveTripExists(applicationContext)
         } else {
+            android.util.Log.d("FishLogReminder", "Canceling reminder")
             ActiveTripReminderScheduler.cancelActiveTripReminder(applicationContext)
         }
     }
