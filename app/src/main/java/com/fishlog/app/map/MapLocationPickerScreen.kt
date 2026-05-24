@@ -6,8 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,10 +18,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.fishlog.app.location.LocationService
 import com.fishlog.app.ui.FishLogViewModel
+import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.MapUtils
 import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +32,8 @@ fun MapLocationPickerScreen(
     initialLat: Double?,
     initialLon: Double?,
     initialZoom: Double,
+    mapStyle: String,
+    onMapStyleChange: (String) -> Unit,
     viewModel: FishLogViewModel,
     onLocationPicked: (Double, Double, Double) -> Unit,
     onBack: () -> Unit
@@ -41,12 +45,18 @@ fun MapLocationPickerScreen(
 
     val mapView = remember {
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(MapUtils.getTileSourceForStyle(mapStyle))
             setMultiTouchControls(true)
         }
     }
 
+    // Apply map style when it changes
+    LaunchedEffect(mapStyle) {
+        mapView.setTileSource(MapUtils.getTileSourceForStyle(mapStyle))
+    }
+
     var initialCenterApplied by remember { mutableStateOf(false) }
+    var showStyleMenu by remember { mutableStateOf(false) }
 
     fun centerOnUser() {
         scope.launch {
@@ -113,6 +123,54 @@ fun MapLocationPickerScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showStyleMenu = true }) {
+                            Icon(Icons.Default.Layers, contentDescription = "Map Style")
+                        }
+                        DropdownMenu(
+                            expanded = showStyleMenu,
+                            onDismissRequest = { showStyleMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Standard") },
+                                onClick = {
+                                    onMapStyleChange(AppPreferences.MAP_STYLE_STANDARD)
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (mapStyle == AppPreferences.MAP_STYLE_STANDARD) {
+                                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Topographic") },
+                                onClick = {
+                                    onMapStyleChange(AppPreferences.MAP_STYLE_TOPOGRAPHIC)
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (mapStyle == AppPreferences.MAP_STYLE_TOPOGRAPHIC) {
+                                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Satellite") },
+                                onClick = {
+                                    onMapStyleChange(AppPreferences.MAP_STYLE_SATELLITE)
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (mapStyle == AppPreferences.MAP_STYLE_SATELLITE) {
+                                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                                    }
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

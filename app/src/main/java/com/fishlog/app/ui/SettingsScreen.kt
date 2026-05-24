@@ -52,6 +52,7 @@ fun SettingsScreen(
     onChooseDefaultMapLocation: () -> Unit,
     onViewWelcomeGuide: () -> Unit,
     onResetWelcomeScreen: () -> Unit,
+    onMapStyleChange: (String) -> Unit,
     onActiveTripReminderChange: (Boolean, Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -176,7 +177,47 @@ fun SettingsScreen(
     var showUnitDialog by remember { mutableStateOf(false) }
     var showMapCenterDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
+    var showMapStyleDialog by remember { mutableStateOf(false) }
 
+    if (showMapStyleDialog) {
+        AlertDialog(
+            onDismissRequest = { showMapStyleDialog = false },
+            title = { Text("Map Style") },
+            text = {
+                Column {
+                    AppearanceOption(
+                        label = "Standard",
+                        selected = viewModel.appPreferences.getMapStyle() == AppPreferences.MAP_STYLE_STANDARD,
+                        onClick = {
+                            onMapStyleChange(AppPreferences.MAP_STYLE_STANDARD)
+                            showMapStyleDialog = false
+                        }
+                    )
+                    AppearanceOption(
+                        label = "Topographic",
+                        selected = viewModel.appPreferences.getMapStyle() == AppPreferences.MAP_STYLE_TOPOGRAPHIC,
+                        onClick = {
+                            onMapStyleChange(AppPreferences.MAP_STYLE_TOPOGRAPHIC)
+                            showMapStyleDialog = false
+                        }
+                    )
+                    AppearanceOption(
+                        label = "Satellite",
+                        selected = viewModel.appPreferences.getMapStyle() == AppPreferences.MAP_STYLE_SATELLITE,
+                        onClick = {
+                            onMapStyleChange(AppPreferences.MAP_STYLE_SATELLITE)
+                            showMapStyleDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMapStyleDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
     if (showReminderDialog) {
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -484,6 +525,20 @@ fun SettingsScreen(
                     subtitle = mapCenterLabel,
                     helperText = mapCenterHelper,
                     onClick = { showMapCenterDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                
+                val mapStyleLabel = when (viewModel.appPreferences.getMapStyle()) {
+                    AppPreferences.MAP_STYLE_TOPOGRAPHIC -> "Topographic"
+                    AppPreferences.MAP_STYLE_SATELLITE -> "Satellite"
+                    else -> "Standard"
+                }
+                SettingRow(
+                    icon = Icons.Default.Layers,
+                    title = "Map Style",
+                    subtitle = mapStyleLabel,
+                    helperText = "Choose your preferred map view.",
+                    onClick = { showMapStyleDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 

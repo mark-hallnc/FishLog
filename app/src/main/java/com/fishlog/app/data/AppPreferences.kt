@@ -22,6 +22,7 @@ class AppPreferences(context: Context) {
         private const val KEY_MAP_LATITUDE = "map_latitude"
         private const val KEY_MAP_LONGITUDE = "map_longitude"
         private const val KEY_MAP_ZOOM = "map_zoom"
+        private const val KEY_MAP_STYLE = "map_style"
         private const val KEY_CLOUD_BACKUP_MODE = "cloud_backup_mode"
         private const val KEY_CLOUD_BACKUP_PENDING = "cloud_backup_pending"
         private const val KEY_LAST_CLOUD_BACKUP_AT = "last_cloud_backup_at"
@@ -34,6 +35,10 @@ class AppPreferences(context: Context) {
 
         const val MAP_CENTER_CURRENT = "CURRENT_LOCATION"
         const val MAP_CENTER_SAVED = "SAVED_LOCATION"
+
+        const val MAP_STYLE_STANDARD = "STANDARD"
+        const val MAP_STYLE_SATELLITE = "SATELLITE"
+        const val MAP_STYLE_TOPOGRAPHIC = "TOPOGRAPHIC"
 
         const val CLOUD_BACKUP_MODE_MANUAL = "manual"
         const val CLOUD_BACKUP_MODE_AUTOMATIC = "automatic"
@@ -177,6 +182,14 @@ class AppPreferences(context: Context) {
 
     fun getMapZoom(): Double {
         return prefs.getFloat(KEY_MAP_ZOOM, 13.0f).toDouble()
+    }
+
+    fun getMapStyle(): String {
+        return prefs.getString(KEY_MAP_STYLE, MAP_STYLE_STANDARD) ?: MAP_STYLE_STANDARD
+    }
+
+    fun setMapStyle(style: String) {
+        prefs.edit().putString(KEY_MAP_STYLE, style).apply()
     }
 
     fun setSavedMapLocation(latitude: Double, longitude: Double, zoom: Double) {

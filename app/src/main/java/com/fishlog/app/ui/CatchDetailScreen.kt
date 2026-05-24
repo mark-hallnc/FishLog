@@ -36,6 +36,7 @@ import java.util.Locale
 fun CatchDetailScreen(
     catch: CatchLog,
     unitSystem: String = AppPreferences.UNITS_US,
+    mapStyle: String = AppPreferences.MAP_STYLE_STANDARD,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -227,6 +228,7 @@ fun CatchDetailScreen(
                                 latitude = catch.latitude!!,
                                 longitude = catch.longitude!!,
                                 isNoCatch = isNoCatch,
+                                mapStyle = mapStyle,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

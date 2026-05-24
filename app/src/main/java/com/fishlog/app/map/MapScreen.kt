@@ -22,6 +22,7 @@ import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.location.LocationService
 import com.fishlog.app.util.FormatUtils
+import com.fishlog.app.util.MapUtils
 import com.fishlog.app.ui.DropdownFilter
 import com.fishlog.app.ui.FishLogViewModel
 import com.fishlog.app.ui.LogTypeFilter
@@ -66,7 +67,9 @@ fun MapScreen(
     mapCenterMode: String,
     mapDefaultLat: Double?,
     mapDefaultLon: Double?,
-    mapDefaultZoom: Double
+    mapDefaultZoom: Double,
+    mapStyle: String,
+    onMapStyleChange: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -155,9 +158,14 @@ fun MapScreen(
 
     val mapView = remember {
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(MapUtils.getTileSourceForStyle(mapStyle))
             setMultiTouchControls(true)
         }
+    }
+
+    // Apply map style when it changes
+    LaunchedEffect(mapStyle) {
+        mapView.setTileSource(MapUtils.getTileSourceForStyle(mapStyle))
     }
     
     val userLocationMarker = remember {
@@ -170,6 +178,7 @@ fun MapScreen(
 
     // Track initial load and filter changes for recentering
     var initialCenterApplied by remember { mutableStateOf(false) }
+    var showStyleMenu by remember { mutableStateOf(false) }
 
     fun centerOnUser() {
         scope.launch {
@@ -251,6 +260,40 @@ fun MapScreen(
                     }
                 },
                 actions = {
+                    Box {
+                        IconButton(onClick = { showStyleMenu = true }) {
+                            Icon(Icons.Default.Layers, contentDescription = "Map Style")
+                        }
+                        DropdownMenu(
+                            expanded = showStyleMenu,
+                            onDismissRequest = { showStyleMenu = false }
+                        ) {
+                            MapStyleMenuItem(
+                                label = "Standard",
+                                selected = mapStyle == AppPreferences.MAP_STYLE_STANDARD,
+                                onClick = {
+                                    onMapStyleChange(AppPreferences.MAP_STYLE_STANDARD)
+                                    showStyleMenu = false
+                                }
+                            )
+                            MapStyleMenuItem(
+                                label = "Topographic",
+                                selected = mapStyle == AppPreferences.MAP_STYLE_TOPOGRAPHIC,
+                                onClick = {
+                                    onMapStyleChange(AppPreferences.MAP_STYLE_TOPOGRAPHIC)
+                                    showStyleMenu = false
+                                }
+                            )
+                            MapStyleMenuItem(
+                                label = "Satellite",
+                                selected = mapStyle == AppPreferences.MAP_STYLE_SATELLITE,
+                                onClick = {
+                                    onMapStyleChange(AppPreferences.MAP_STYLE_SATELLITE)
+                                    showStyleMenu = false
+                                }
+                            )
+                        }
+                    }
                     IconButton(onClick = { centerOnUser() }) {
                         Icon(Icons.Default.MyLocation, contentDescription = "Center on Me")
                     }
@@ -635,6 +678,23 @@ fun MapFilterSection(
             }
         }
     }
+}
+
+@Composable
+private fun MapStyleMenuItem(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = onClick,
+        trailingIcon = {
+            if (selected) {
+                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+        }
+    )
 }
 
 private fun formatTimestamp(timestamp: Long): String {

@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.fishlog.app.R
+import com.fishlog.app.data.AppPreferences
+import com.fishlog.app.util.MapUtils
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -19,13 +21,14 @@ fun StaticMapPreview(
     longitude: Double,
     isNoCatch: Boolean,
     modifier: Modifier = Modifier,
-    zoomLevel: Double = 15.0
+    zoomLevel: Double = 15.0,
+    mapStyle: String = AppPreferences.MAP_STYLE_STANDARD
 ) {
     val context = LocalContext.current
     
-    val mapView = remember {
+    val mapView = remember(mapStyle) {
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(MapUtils.getTileSourceForStyle(mapStyle))
             setMultiTouchControls(false)
             zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
             // Disable all interactions to make it "static"

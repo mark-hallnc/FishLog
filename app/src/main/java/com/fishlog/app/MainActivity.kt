@@ -139,6 +139,7 @@ class MainActivity : ComponentActivity() {
             var mapDefaultLat by remember { mutableStateOf(appPreferences.getMapLatitude()) }
             var mapDefaultLon by remember { mutableStateOf(appPreferences.getMapLongitude()) }
             var mapDefaultZoom by remember { mutableStateOf(appPreferences.getMapZoom()) }
+            var mapStyle by remember { mutableStateOf(appPreferences.getMapStyle()) }
 
             var activeTripReminderEnabled by remember { mutableStateOf(appPreferences.isActiveTripReminderEnabled()) }
             var activeTripReminderDelay by remember { mutableStateOf(appPreferences.getActiveTripReminderDelayHours()) }
@@ -158,6 +159,7 @@ class MainActivity : ComponentActivity() {
                     mapDefaultLat = mapDefaultLat,
                     mapDefaultLon = mapDefaultLon,
                     mapDefaultZoom = mapDefaultZoom,
+                    mapStyle = mapStyle,
                     activeTripReminderEnabled = activeTripReminderEnabled,
                     activeTripReminderDelay = activeTripReminderDelay,
                     onAppearanceModeChange = { mode ->
@@ -183,6 +185,10 @@ class MainActivity : ComponentActivity() {
                         mapDefaultLon = null
                         appPreferences.clearSavedMapLocation()
                     },
+                    onMapStyleChange = { style ->
+                        mapStyle = style
+                        appPreferences.setMapStyle(style)
+                    },
                     onActiveTripReminderChange = { enabled, delay ->
                         android.util.Log.d("FishLogReminder", "Setting changed: enabled=$enabled, delay=$delay")
                         activeTripReminderEnabled = enabled
@@ -204,6 +210,7 @@ fun MainScreen(
     mapDefaultLat: Double?,
     mapDefaultLon: Double?,
     mapDefaultZoom: Double,
+    mapStyle: String,
     activeTripReminderEnabled: Boolean,
     activeTripReminderDelay: Int,
     onAppearanceModeChange: (String) -> Unit,
@@ -211,6 +218,7 @@ fun MainScreen(
     onMapCenterModeChange: (String) -> Unit,
     onSetDefaultMapLocation: (Double, Double, Double) -> Unit,
     onClearDefaultMapLocation: () -> Unit,
+    onMapStyleChange: (String) -> Unit,
     onActiveTripReminderChange: (Boolean, Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -430,6 +438,7 @@ fun MainScreen(
                 CatchDetailScreen(
                     catch = catch,
                     unitSystem = unitSystem,
+                    mapStyle = mapStyle,
                     onBack = { handleBack() },
                     onEdit = { 
                         currentScreen = if (catch.logType == "NO_CATCH") "NoCatchForm" else "Form"
@@ -494,12 +503,16 @@ fun MainScreen(
                 mapCenterMode = mapCenterMode,
                 mapDefaultLat = mapDefaultLat,
                 mapDefaultLon = mapDefaultLon,
-                mapDefaultZoom = mapDefaultZoom
+                mapDefaultZoom = mapDefaultZoom,
+                mapStyle = mapStyle,
+                onMapStyleChange = onMapStyleChange
             )
             "MapLocationPicker" -> MapLocationPickerScreen(
                 initialLat = mapDefaultLat,
                 initialLon = mapDefaultLon,
                 initialZoom = mapDefaultZoom,
+                mapStyle = mapStyle,
+                onMapStyleChange = onMapStyleChange,
                 viewModel = viewModel,
                 onLocationPicked = { lat, lon, zoom ->
                     onSetDefaultMapLocation(lat, lon, zoom)
@@ -624,6 +637,7 @@ fun MainScreen(
                 onResetWelcomeScreen = {
                     appPreferences.setHasSeenFirstRun(false)
                 },
+                onMapStyleChange = onMapStyleChange,
                 onActiveTripReminderChange = onActiveTripReminderChange,
                 onBack = { handleBack() }
             )
