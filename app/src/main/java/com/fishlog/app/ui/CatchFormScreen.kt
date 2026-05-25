@@ -265,6 +265,7 @@ fun CatchFormScreen(
                                     bait = ""
                                     notes = ""
                                     photoUri = null
+                                    quantity = "1"
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp)

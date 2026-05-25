@@ -623,6 +623,7 @@ fun MainScreen(
                 mapCenterMode = mapCenterMode,
                 mapDefaultLat = mapDefaultLat,
                 mapDefaultLon = mapDefaultLon,
+                mapStyle = mapStyle,
                 activeTripReminderEnabled = activeTripReminderEnabled,
                 activeTripReminderDelay = activeTripReminderDelay,
                 onAppearanceModeChange = onAppearanceModeChange,

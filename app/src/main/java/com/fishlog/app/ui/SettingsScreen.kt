@@ -43,6 +43,7 @@ fun SettingsScreen(
     mapCenterMode: String,
     mapDefaultLat: Double?,
     mapDefaultLon: Double?,
+    mapStyle: String,
     activeTripReminderEnabled: Boolean,
     activeTripReminderDelay: Int,
     onAppearanceModeChange: (String) -> Unit,
@@ -182,12 +183,12 @@ fun SettingsScreen(
     if (showMapStyleDialog) {
         AlertDialog(
             onDismissRequest = { showMapStyleDialog = false },
-            title = { Text("Map Style") },
+            title = { Text("Default Map Style") },
             text = {
                 Column {
                     AppearanceOption(
                         label = "Standard",
-                        selected = viewModel.appPreferences.getMapStyle() == AppPreferences.MAP_STYLE_STANDARD,
+                        selected = mapStyle == AppPreferences.MAP_STYLE_STANDARD,
                         onClick = {
                             onMapStyleChange(AppPreferences.MAP_STYLE_STANDARD)
                             showMapStyleDialog = false
@@ -195,7 +196,7 @@ fun SettingsScreen(
                     )
                     AppearanceOption(
                         label = "Topographic",
-                        selected = viewModel.appPreferences.getMapStyle() == AppPreferences.MAP_STYLE_TOPOGRAPHIC,
+                        selected = mapStyle == AppPreferences.MAP_STYLE_TOPOGRAPHIC,
                         onClick = {
                             onMapStyleChange(AppPreferences.MAP_STYLE_TOPOGRAPHIC)
                             showMapStyleDialog = false
@@ -203,7 +204,7 @@ fun SettingsScreen(
                     )
                     AppearanceOption(
                         label = "Satellite",
-                        selected = viewModel.appPreferences.getMapStyle() == AppPreferences.MAP_STYLE_SATELLITE,
+                        selected = mapStyle == AppPreferences.MAP_STYLE_SATELLITE,
                         onClick = {
                             onMapStyleChange(AppPreferences.MAP_STYLE_SATELLITE)
                             showMapStyleDialog = false
@@ -528,7 +529,7 @@ fun SettingsScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 
-                val mapStyleLabel = when (viewModel.appPreferences.getMapStyle()) {
+                val mapStyleLabel = when (mapStyle) {
                     AppPreferences.MAP_STYLE_TOPOGRAPHIC -> "Topographic"
                     AppPreferences.MAP_STYLE_SATELLITE -> "Satellite"
                     else -> "Standard"
