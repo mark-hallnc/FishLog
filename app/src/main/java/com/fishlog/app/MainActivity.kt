@@ -255,6 +255,13 @@ fun MainScreen(
 
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        while(true) {
+            viewModel.refreshCloudBackupStatusFromPrefs()
+            delay(5000) // Refresh every 5 seconds while app is active
+        }
+    }
+
     fun handleBack() {
         android.util.Log.d("FishLogNav", "Back pressed on screen: $currentScreen")
         when (currentScreen) {
@@ -955,7 +962,13 @@ fun CloudBackupStatusChip(
             Triple("Manual Backup", Color.Gray, Icons.Default.Cloud)
         }
         status.isPending -> {
-            Triple("Backup Pending", Color(0xFFFFA000), Icons.Default.CloudSync)
+            val workerMsg = status.autoBackupWorkerMessage
+            val labelText = when {
+                workerMsg?.contains("scheduled soon", ignoreCase = true) == true -> "Backing up soon"
+                workerMsg?.contains("scheduled", ignoreCase = true) == true -> "Backup Scheduled"
+                else -> "Backup Pending"
+            }
+            Triple(labelText, Color(0xFFFFA000), Icons.Default.CloudSync)
         }
         else -> {
             Triple("Auto Backup On", Color(0xFF4CAF50), Icons.Default.CloudDone)

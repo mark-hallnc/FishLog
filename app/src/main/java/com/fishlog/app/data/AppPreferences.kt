@@ -30,6 +30,11 @@ class AppPreferences(context: Context) {
         private const val KEY_LAST_CLOUD_BACKUP_FAILED_AT = "last_cloud_backup_failed_at"
         private const val KEY_LAST_CLOUD_BACKUP_ERROR_MESSAGE = "last_cloud_backup_error_message"
         private const val KEY_LAST_LOCAL_DATA_CHANGED_AT = "last_local_data_changed_at"
+        private const val KEY_LAST_AUTO_BACKUP_SCHEDULED_AT = "last_auto_backup_scheduled_at"
+        private const val KEY_LAST_AUTO_BACKUP_STARTED_AT = "last_auto_backup_started_at"
+        private const val KEY_LAST_AUTO_BACKUP_COMPLETED_AT = "last_auto_backup_completed_at"
+        private const val KEY_AUTO_BACKUP_IN_PROGRESS = "auto_backup_in_progress"
+        private const val KEY_AUTO_BACKUP_LAST_WORKER_MESSAGE = "auto_backup_last_worker_message"
         private const val KEY_REMINDER_ENABLED = "active_trip_reminder_enabled"
         private const val KEY_REMINDER_DELAY = "active_trip_reminder_delay_hours"
 
@@ -120,6 +125,49 @@ class AppPreferences(context: Context) {
     fun getLastLocalDataChangedAt(): Long? {
         val at = prefs.getLong(KEY_LAST_LOCAL_DATA_CHANGED_AT, 0L)
         return if (at == 0L) null else at
+    }
+
+    fun setAutoBackupScheduled(timestamp: Long) {
+        prefs.edit().putLong(KEY_LAST_AUTO_BACKUP_SCHEDULED_AT, timestamp).apply()
+    }
+
+    fun getAutoBackupScheduledAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_AUTO_BACKUP_SCHEDULED_AT, 0L)
+        return if (at == 0L) null else at
+    }
+
+    fun setAutoBackupStarted(timestamp: Long) {
+        prefs.edit().putLong(KEY_LAST_AUTO_BACKUP_STARTED_AT, timestamp).apply()
+    }
+
+    fun getAutoBackupStartedAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_AUTO_BACKUP_STARTED_AT, 0L)
+        return if (at == 0L) null else at
+    }
+
+    fun setAutoBackupCompleted(timestamp: Long) {
+        prefs.edit().putLong(KEY_LAST_AUTO_BACKUP_COMPLETED_AT, timestamp).apply()
+    }
+
+    fun getAutoBackupCompletedAt(): Long? {
+        val at = prefs.getLong(KEY_LAST_AUTO_BACKUP_COMPLETED_AT, 0L)
+        return if (at == 0L) null else at
+    }
+
+    fun setAutoBackupInProgress(inProgress: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_BACKUP_IN_PROGRESS, inProgress).apply()
+    }
+
+    fun getAutoBackupInProgress(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_BACKUP_IN_PROGRESS, false)
+    }
+
+    fun setAutoBackupWorkerMessage(message: String?) {
+        prefs.edit().putString(KEY_AUTO_BACKUP_LAST_WORKER_MESSAGE, message).apply()
+    }
+
+    fun getAutoBackupWorkerMessage(): String? {
+        return prefs.getString(KEY_AUTO_BACKUP_LAST_WORKER_MESSAGE, null)
     }
 
     fun isActiveTripReminderEnabled(): Boolean {

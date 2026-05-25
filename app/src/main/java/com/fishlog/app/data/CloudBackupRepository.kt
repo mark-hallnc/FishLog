@@ -30,9 +30,15 @@ class CloudBackupRepository(context: Context) {
 
     fun isSignedIn(): Boolean {
         return try {
-            if (!SupabaseClientProvider.isConfigured()) return false
-            SupabaseClientProvider.client.auth.currentSessionOrNull() != null
+            if (!SupabaseClientProvider.isConfigured()) {
+                Log.d(TAG, "isSignedIn: Supabase not configured")
+                return false
+            }
+            val session = SupabaseClientProvider.client.auth.currentSessionOrNull()
+            Log.d(TAG, "isSignedIn: Session is ${if (session != null) "active" else "null"}")
+            session != null
         } catch (e: Exception) {
+            Log.e(TAG, "isSignedIn: Error checking session", e)
             false
         }
     }
@@ -50,6 +56,15 @@ class CloudBackupRepository(context: Context) {
     fun getLastBackupAt(): Long? {
         val last = prefs.getLong(KEY_LAST_BACKUP_AT, 0L)
         return if (last == 0L) null else last
+    }
+
+    suspend fun getCurrentUserEmail(): String? = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured()) return@withContext null
+        try {
+            SupabaseClientProvider.client.auth.currentUserOrNull()?.email
+        } catch (e: Exception) {
+            null
+        }
     }
 
     suspend fun refreshAccountState(): Result<AccountInfo?> = withContext(Dispatchers.IO) {

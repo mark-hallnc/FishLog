@@ -36,7 +36,8 @@ data class CloudBackupStatus(
     val lastFailedAt: Long?,
     val lastErrorMessage: String?,
     val photosIncluded: Boolean,
-    val backupPath: String?
+    val backupPath: String?,
+    val autoBackupWorkerMessage: String? = null
 )
 
 data class CloudBackupDiagnosticResult(

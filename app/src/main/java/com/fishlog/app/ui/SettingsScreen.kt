@@ -684,11 +684,16 @@ fun SettingsScreen(
                         if (status != null) {
                             Spacer(modifier = Modifier.height(16.dp))
                             
+                            val workerMsg = status.autoBackupWorkerMessage
+                            
                             val statusLabel = when {
                                 !status.isSignedIn -> "Signed Out"
                                 status.isBackingUp -> "Backing up..."
                                 status.lastErrorMessage != null -> "Backup Failed"
-                                status.isPending -> "Backup Pending"
+                                status.isPending -> {
+                                    if (workerMsg?.contains("scheduled", ignoreCase = true) == true) "Backup Scheduled"
+                                    else "Backup Pending"
+                                }
                                 else -> "Up to date"
                             }
                             
@@ -720,7 +725,7 @@ fun SettingsScreen(
                                 status.lastBackupAt?.let { lastAt ->
                                     val dateStr = SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(lastAt))
                                     Text(
-                                        text = "Last backup: $dateStr",
+                                        text = "Last successful backup: $dateStr",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -730,6 +735,15 @@ fun SettingsScreen(
                                     }
                                 }
                                 
+                                if (workerMsg != null && status.isPending) {
+                                    Text(
+                                        text = "Status: $workerMsg",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+
                                 if (status.lastErrorMessage != null) {
                                     Text(
                                         text = "Last error: ${status.lastErrorMessage}",
@@ -791,7 +805,7 @@ fun SettingsScreen(
 
                         Text(
                             text = if (viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC)
-                                "Automatic backup saves your latest data to the cloud when internet is available. It does not sync across devices automatically."
+                                "Automatic backups run shortly after changes when internet is available. It does not sync across devices automatically."
                                 else "Back up only when you tap Backup Now.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),

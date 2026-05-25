@@ -22,23 +22,38 @@ class AutoBackupWorker(
         val prefs = AppPreferences(applicationContext)
         val cloudRepo = CloudBackupRepository(applicationContext)
 
+        val now = System.currentTimeMillis()
+        prefs.setLastCloudBackupAttempt(now)
+        prefs.setAutoBackupStarted(now)
+        prefs.setAutoBackupInProgress(true)
+        prefs.setAutoBackupWorkerMessage("Backing up")
+
         // 1. Checks AppPreferences
         if (!prefs.isAutomaticCloudBackupEnabled()) {
+            Log.d(TAG, "Auto backup worker: Automatic mode disabled.")
+            prefs.setAutoBackupInProgress(false)
+            prefs.setAutoBackupWorkerMessage("Automatic backup is off")
             return androidx.work.ListenableWorker.Result.success()
         }
 
         if (!prefs.getCloudBackupPending()) {
+            Log.d(TAG, "Auto backup worker: No pending changes.")
+            prefs.setAutoBackupInProgress(false)
+            prefs.setAutoBackupWorkerMessage("Up to date")
             return androidx.work.ListenableWorker.Result.success()
         }
 
         // 2. Checks Supabase session/current user
         if (!cloudRepo.isSignedIn()) {
             Log.d(TAG, "Auto backup worker: Not signed in. Keeping pending flag true.")
+            prefs.setAutoBackupInProgress(false)
+            prefs.setLastCloudBackupFailure(now, "Please sign in to use cloud backup.")
+            prefs.setAutoBackupWorkerMessage("Not signed in")
             return androidx.work.ListenableWorker.Result.success()
         }
 
         try {
-            Log.d(TAG, "Auto backup worker: Starting cloud backup...")
+            Log.d(TAG, "Auto backup worker: Fetching logs and trips...")
             
             // 3. Create full backup JSON
             val database = FishLogDatabase.getDatabase(applicationContext)
@@ -52,7 +67,10 @@ class AutoBackupWorker(
             return if (result.isSuccess) {
                 // 5. On success
                 prefs.clearCloudBackupPending()
-                prefs.setLastCloudBackupSuccess(System.currentTimeMillis())
+                prefs.setLastCloudBackupSuccess(now)
+                prefs.setAutoBackupCompleted(now)
+                prefs.setAutoBackupInProgress(false)
+                prefs.setAutoBackupWorkerMessage("Backup complete")
                 Log.d(TAG, "Auto backup worker: Success.")
                 androidx.work.ListenableWorker.Result.success()
             } else {
@@ -60,18 +78,23 @@ class AutoBackupWorker(
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 Log.e(TAG, "Auto backup worker: Failed - $error")
                 
+                prefs.setAutoBackupInProgress(false)
                 if (error.contains("sign in", ignoreCase = true) || error.contains("not set up", ignoreCase = true)) {
                     // setup failure/sign-out: keep pending true, return success so it doesn't endlessly retry
+                    prefs.setAutoBackupWorkerMessage("Cloud setup issue")
                     androidx.work.ListenableWorker.Result.success()
                 } else {
                     // transient failure
-                    prefs.setLastCloudBackupFailure(System.currentTimeMillis(), error)
+                    prefs.setLastCloudBackupFailure(now, error)
+                    prefs.setAutoBackupWorkerMessage("Backup failed")
                     androidx.work.ListenableWorker.Result.retry()
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Auto backup worker: Exception during backup", e)
-            prefs.setLastCloudBackupFailure(System.currentTimeMillis(), "Unexpected error during backup.")
+            prefs.setAutoBackupInProgress(false)
+            prefs.setLastCloudBackupFailure(now, "Unexpected error during backup.")
+            prefs.setAutoBackupWorkerMessage("Error: ${e.message}")
             return androidx.work.ListenableWorker.Result.retry()
         }
     }

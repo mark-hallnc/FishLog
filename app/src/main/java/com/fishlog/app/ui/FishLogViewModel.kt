@@ -10,6 +10,7 @@ import com.fishlog.app.data.*
 import com.fishlog.app.backup.AutoBackupScheduler
 import com.fishlog.app.reminders.ActiveTripReminderScheduler
 import com.fishlog.app.util.WaterBodyNameUtils
+import androidx.work.WorkManager
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -96,14 +97,7 @@ class FishLogViewModel(
     init {
         viewModelScope.launch {
             cloudBackupRepository.refreshAccountState()
-            accountStatus = if (cloudBackupRepository.isSignedIn()) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT
-            accountEmail = cloudBackupRepository.getCurrentAccountEmail()
-            lastCloudBackupAt = appPreferences.getLastCloudBackupAt()
-            lastCloudBackupErrorMessage = appPreferences.getLastCloudBackupErrorMessage()
-            cloudBackupMode = appPreferences.getCloudBackupMode()
-            cloudBackupPending = appPreferences.getCloudBackupPending()
-            
-            refreshCloudBackupStatus()
+            refreshCloudBackupStatusFromPrefs()
             
             if (appPreferences.isAutomaticCloudBackupEnabled() && 
                 appPreferences.getCloudBackupPending() && 
@@ -118,6 +112,17 @@ class FishLogViewModel(
         }
     }
 
+    fun refreshCloudBackupStatusFromPrefs() {
+        android.util.Log.d("FishLogCloud", "Refreshing backup status from prefs")
+        accountStatus = if (cloudBackupRepository.isSignedIn()) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT
+        accountEmail = cloudBackupRepository.getCurrentAccountEmail()
+        lastCloudBackupAt = appPreferences.getLastCloudBackupAt()
+        lastCloudBackupErrorMessage = appPreferences.getLastCloudBackupErrorMessage()
+        cloudBackupMode = appPreferences.getCloudBackupMode()
+        cloudBackupPending = appPreferences.getCloudBackupPending()
+        refreshCloudBackupStatus()
+    }
+
     fun refreshCloudBackupStatus() {
         cloudBackupStatus = calculateBackupStatus()
     }
@@ -127,6 +132,8 @@ class FishLogViewModel(
             SupabaseClientProvider.client.auth.currentUserOrNull()
         } else null
         
+        val isBackingUp = backupUiState == BackupUiState.BACKUP_IN_PROGRESS || appPreferences.getAutoBackupInProgress()
+        
         return CloudBackupStatus(
             isSignedIn = user != null,
             email = user?.email ?: accountEmail,
@@ -134,13 +141,14 @@ class FishLogViewModel(
             mode = cloudBackupMode,
             isAutomatic = appPreferences.isAutomaticCloudBackupEnabled(),
             isPending = cloudBackupPending,
-            isBackingUp = backupUiState == BackupUiState.BACKUP_IN_PROGRESS,
+            isBackingUp = isBackingUp,
             lastBackupAt = lastCloudBackupAt,
             lastAttemptAt = appPreferences.getLastCloudBackupAttemptAt(),
             lastFailedAt = appPreferences.getLastCloudBackupFailedAt(),
             lastErrorMessage = lastCloudBackupErrorMessage,
-            photosIncluded = true, // Now supports photos
-            backupPath = user?.let { "${it.id}/fishlog-backup.json" }
+            photosIncluded = true,
+            backupPath = user?.let { "${it.id}/fishlog-backup.json" },
+            autoBackupWorkerMessage = appPreferences.getAutoBackupWorkerMessage()
         )
     }
 
