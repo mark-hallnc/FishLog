@@ -565,7 +565,7 @@ fun SettingsScreen(
             SettingsSection(title = "Data & Backup") {
                 // 1. About Backups
                 Text(
-                    text = "FishLog stores data locally on this device. You can export backups manually. Cloud backup is optional and coming later.",
+                    text = "FishLog stores data locally on this device. You can export backups manually.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -616,7 +616,7 @@ fun SettingsScreen(
 
                 // 4. Full Backup
                 Text("Full Backup", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text("JSON backup for restoring or moving data.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Full backup for restoring or moving data.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -737,23 +737,7 @@ fun SettingsScreen(
                                         modifier = Modifier.padding(top = 4.dp)
                                     )
                                 }
-                                
-                                status.backupPath?.let {
-                                    Text(
-                                        text = "Path: $it",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
-                                }
                             }
-                            
-                            Text(
-                                text = if (status.photosIncluded) "Photos: Included" else "Photos: Not included in cloud backup yet",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
                             
                             if (status.isSignedIn) {
                                 Spacer(modifier = Modifier.height(12.dp))
@@ -1026,13 +1010,6 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-                            
-                            Text(
-                                text = "Cloud backup protects trips, logs, and catch photos.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(top = 12.dp)
-                            )
                         }
                     }
                 }

@@ -875,7 +875,7 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "Log Catch",
-                    subtitle = "Got one!",
+                    subtitle = "Fish on!",
                     icon = Icons.Default.AddCircle,
                     onClick = onLogCatchClick
                 )
@@ -883,7 +883,7 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "No Catch",
-                    subtitle = "Still fishing",
+                    subtitle = "Log those too!",
                     icon = Icons.Default.Block,
                     onClick = onLogNoCatchClick
                 )
@@ -899,7 +899,7 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "Map",
-                    subtitle = "Hotspots",
+                    subtitle = "See logs on the map",
                     icon = Icons.Default.Map,
                     onClick = onMapClick
                 )
@@ -907,7 +907,7 @@ fun HomeScreen(
             item {
                 HomeCard(
                     title = "Trip History",
-                    subtitle = "Outings",
+                    subtitle = "See past trips",
                     icon = Icons.Default.ListAlt,
                     onClick = onTripHistoryClick
                 )
