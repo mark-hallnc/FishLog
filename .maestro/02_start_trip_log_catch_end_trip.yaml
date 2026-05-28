@@ -1,0 +1,46 @@
+appId: com.fishlog.app
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Welcome to FishLog"
+    file: subflows/dismiss_welcome.yaml
+- tapOn:
+    id: "home_start_trip_button"
+- tapOn: "Trip Name"
+- inputText: "Maestro Test Trip"
+- tapOn: "Water Body"
+- inputText: "Maestro Lake"
+- tapOn:
+    id: "start_trip_button"
+- assertVisible: "ACTIVE TRIP"
+- assertVisible: "Maestro Test Trip"
+- tapOn:
+    id: "home_active_trip_log_catch_button"
+- tapOn: "Species"
+- inputText: "Channel Catfish"
+- tapOn: "Length (in)"
+- inputText: "18"
+- tapOn: "Weight (lb)"
+- inputText: "2"
+- tapOn: "oz"
+- inputText: "4"
+- tapOn: "Water Temp (°F)"
+- inputText: "72"
+- tapOn: "Depth (ft)"
+- inputText: "6"
+- tapOn: "Bait or Lure"
+- inputText: "Chicken Liver"
+- tapOn: "Notes"
+- inputText: "Maestro test catch"
+- tapOn:
+    id: "save_catch_button"
+- assertVisible: "Catch saved successfully!"
+- tapOn: "Return"
+- assertVisible: "Maestro Test Trip"
+- assertVisible: "Channel Catfish"
+- tapOn:
+    id: "home_active_trip_end_trip_button"
+- assertVisible: "Trip Summary"
+- tapOn: "Done"
+- assertVisible: "Start New Trip"

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -768,6 +769,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(x = 12.dp, y = (-12).dp)
+                        .testTag("home_settings_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
@@ -885,7 +887,8 @@ fun HomeScreen(
                     title = "Log Catch",
                     subtitle = "Fish on!",
                     icon = Icons.Default.AddCircle,
-                    onClick = onLogCatchClick
+                    onClick = onLogCatchClick,
+                    modifier = Modifier.testTag("home_log_catch_card")
                 )
             }
             item {
@@ -893,7 +896,8 @@ fun HomeScreen(
                     title = "No Catch",
                     subtitle = "Log those too!",
                     icon = Icons.Default.Block,
-                    onClick = onLogNoCatchClick
+                    onClick = onLogNoCatchClick,
+                    modifier = Modifier.testTag("home_log_no_catch_card")
                 )
             }
             item {
@@ -901,7 +905,8 @@ fun HomeScreen(
                     title = "History",
                     subtitle = "Past logs",
                     icon = Icons.Default.History,
-                    onClick = onHistoryClick
+                    onClick = onHistoryClick,
+                    modifier = Modifier.testTag("home_history_card")
                 )
             }
             item {
@@ -909,7 +914,8 @@ fun HomeScreen(
                     title = "Map",
                     subtitle = "See logs on the map",
                     icon = Icons.Default.Map,
-                    onClick = onMapClick
+                    onClick = onMapClick,
+                    modifier = Modifier.testTag("home_map_card")
                 )
             }
             item {
@@ -917,7 +923,8 @@ fun HomeScreen(
                     title = "Trip History",
                     subtitle = "See past trips",
                     icon = Icons.Default.ListAlt,
-                    onClick = onTripHistoryClick
+                    onClick = onTripHistoryClick,
+                    modifier = Modifier.testTag("home_trip_history_card")
                 )
             }
             item {
@@ -925,7 +932,8 @@ fun HomeScreen(
                     title = "Insights",
                     subtitle = "Stats & patterns",
                     icon = Icons.Default.Analytics,
-                    onClick = onInsightsClick
+                    onClick = onInsightsClick,
+                    modifier = Modifier.testTag("home_insights_card")
                 )
             }
             item {
@@ -934,7 +942,8 @@ fun HomeScreen(
                     subtitle = "AI & deeper patterns",
                     icon = Icons.Default.AutoAwesome,
                     badge = FeatureGate.paidLabel(PaidFeature.ADVANCED_ANALYTICS),
-                    onClick = onAdvancedAnalyticsClick
+                    onClick = onAdvancedAnalyticsClick,
+                    modifier = Modifier.testTag("home_advanced_analytics_card")
                 )
             }
         }
@@ -1076,7 +1085,9 @@ fun TripStatusCard(
                 Button(
                     onClick = onStartTrip,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("home_start_trip_button")
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1155,7 +1166,9 @@ fun TripStatusCard(
                 ) {
                     Button(
                         onClick = onLogCatch,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("home_active_trip_log_catch_button"),
                         enabled = !isEndingTrip,
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -1165,7 +1178,9 @@ fun TripStatusCard(
                     }
                     Button(
                         onClick = onLogNoCatch,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("home_active_trip_log_no_catch_button"),
                         enabled = !isEndingTrip,
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -1189,7 +1204,9 @@ fun TripStatusCard(
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("home_active_trip_end_trip_button"),
                     enabled = !isEndingTrip,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -1219,11 +1236,12 @@ fun HomeCard(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = MaterialTheme.colorScheme.primary,
     badge: String? = null,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(110.dp),
         shape = RoundedCornerShape(24.dp),

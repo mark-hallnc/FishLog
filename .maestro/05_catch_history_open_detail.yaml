@@ -1,0 +1,17 @@
+appId: com.fishlog.app
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Welcome to FishLog"
+    file: subflows/dismiss_welcome.yaml
+- tapOn:
+    id: "home_history_card"
+- assertVisible: "Catch History"
+- runFlow:
+    when:
+      visible: "Channel Catfish"
+    commands:
+      - tapOn: "Channel Catfish"
+      - assertVisible: "Chicken Liver"
+      - assertVisible: "Catch Details"

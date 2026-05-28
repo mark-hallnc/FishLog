@@ -1,0 +1,17 @@
+appId: com.fishlog.app
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Welcome to FishLog"
+    file: subflows/dismiss_welcome.yaml
+- tapOn:
+    id: "home_trip_history_card"
+- assertVisible: "Trip History"
+- runFlow:
+    when:
+      visible: "Maestro Test Trip"
+    commands:
+      - tapOn: "Maestro Test Trip"
+      - assertVisible: "Maestro Lake"
+      - assertVisible: "Trip Detail"

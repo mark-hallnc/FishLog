@@ -1,0 +1,11 @@
+appId: com.fishlog.app
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Welcome to FishLog"
+    file: subflows/dismiss_welcome.yaml
+- assertVisible: "FishLog"
+- assertVisible: "Dashboard"
+- assertVisible: "Start New Trip"
+- assertVisible: "Log Catch"

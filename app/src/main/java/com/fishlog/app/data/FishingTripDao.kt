@@ -22,5 +22,8 @@ interface FishingTripDao {
 
     @Query("SELECT * FROM fishing_trips WHERE id = :id")
     fun getTripById(id: Long): Flow<FishingTrip?>
+
+    @Query("DELETE FROM fishing_trips")
+    suspend fun deleteAllTrips()
 }
 

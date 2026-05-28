@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
 import com.fishlog.app.location.LocationService
 import com.fishlog.app.data.WeatherData
 import com.fishlog.app.util.WaterBodyNameUtils
@@ -375,7 +376,10 @@ fun StartTripScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .testTag("start_trip_button"),
                 shape = RoundedCornerShape(16.dp),
                 enabled = !isSaving
             ) {

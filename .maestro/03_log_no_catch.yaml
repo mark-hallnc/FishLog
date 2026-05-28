@@ -1,0 +1,24 @@
+appId: com.fishlog.app
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Welcome to FishLog"
+    file: subflows/dismiss_welcome.yaml
+- tapOn:
+    id: "home_log_no_catch_card"
+- tapOn: "Water Temp (°F)"
+- inputText: "70"
+- tapOn: "Depth (ft)"
+- inputText: "8"
+- tapOn: "Bait or Lure"
+- inputText: "Hot Dog"
+- tapOn: "Notes"
+- inputText: "Maestro no-catch test"
+- tapOn: "Save No-Catch Log"
+- assertVisible: "No-Catch log saved!"
+- tapOn: "Return"
+- tapOn:
+    id: "home_history_card"
+- assertVisible: "No Catch"
+- assertVisible: "Hot Dog"

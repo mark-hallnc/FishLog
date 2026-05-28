@@ -806,5 +806,48 @@ class FishLogViewModel(
             markCloudBackupNeeded("clear_sample_data")
         }
     }
+
+    fun deleteAllTripsAndLogs(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val photoHelper = PhotoStorageHelper(applicationContext)
+                // Fetch fresh list from DAO to ensure all files are identified
+                val catches = catchLogDao.getAllCatches().first()
+                
+                // 1. Delete local photo files
+                catches.forEach { catch ->
+                    if (!catch.photoUri.isNullOrBlank()) {
+                        try {
+                            photoHelper.deletePhoto(catch.photoUri)
+                        } catch (e: Exception) {
+                            Log.w("FishLogDanger", "Failed to delete photo file: ${catch.photoUri}", e)
+                        }
+                    }
+                }
+
+                // 2. Delete logs
+                catchLogDao.deleteAllLogs()
+
+                // 3. Delete trips
+                fishingTripDao.deleteAllTrips()
+
+                // 4. Cancel active trip reminder
+                ActiveTripReminderScheduler.cancelActiveTripReminder(applicationContext)
+
+                // 5. Clear active trip forecast
+                activeTripForecast = null
+                activeTripForecastForTripId = null
+                activeTripForecastFetchedAt = null
+
+                // 6. Mark cloud backup pending
+                markCloudBackupNeeded("clear_all_trips_and_logs")
+
+                onResult("All trips and logs were deleted.")
+            } catch (e: Exception) {
+                Log.e("FishLogDanger", "Error deleting all data", e)
+                onResult("Could not delete all trips and logs.")
+            }
+        }
+    }
 }
 

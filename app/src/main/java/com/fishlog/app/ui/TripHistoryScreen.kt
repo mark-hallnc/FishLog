@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.ui.DateRangeFilter
@@ -39,6 +41,7 @@ fun TripHistoryScreen(
     var statusFilter by remember { mutableStateOf("All Trips") }
     var waterBodyFilter by remember { mutableStateOf("All Water Bodies") }
     var dateFilter by remember { mutableStateOf<DateRangeFilter>(DateRangeFilter.AllDates) }
+    var showFilters by rememberSaveable { mutableStateOf(false) }
 
     val waterBodies = remember(trips) {
         listOf("All Water Bodies") + trips.map { it.waterBody }.filter { it.isNotBlank() }.distinct().sorted()
@@ -89,6 +92,17 @@ fun TripHistoryScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { showFilters = !showFilters },
+                        modifier = Modifier.testTag("trip_history_filter_button")
+                    ) {
+                        Icon(
+                            imageVector = if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
+                            contentDescription = "Toggle Filters"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -104,55 +118,107 @@ fun TripHistoryScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // Filters section
-            Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search trips...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        trailingIcon = if (searchQuery.isNotEmpty()) {
-                            { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, contentDescription = null) } }
-                        } else null,
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                    
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DropdownFilter(
-                            label = "Status",
-                            selectedOption = statusFilter,
-                            options = listOf("All Trips", "Active", "Completed"),
-                            onOptionSelected = { statusFilter = it },
-                            modifier = Modifier.weight(1f)
+            if (showFilters) {
+                Surface(
+                    tonalElevation = 2.dp,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search trips...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null
+                                )
+                            },
+                            trailingIcon = if (searchQuery.isNotEmpty()) {
+                                {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = null
+                                        )
+                                    }
+                                }
+                            } else null,
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
                         )
-                        DropdownFilter(
-                            label = "Water Body",
-                            selectedOption = waterBodyFilter,
-                            options = waterBodies,
-                            onOptionSelected = { waterBodyFilter = it },
-                            modifier = Modifier.weight(1f)
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DropdownFilter(
+                                label = "Status",
+                                selectedOption = statusFilter,
+                                options = listOf("All Trips", "Active", "Completed"),
+                                onOptionSelected = { statusFilter = it },
+                                modifier = Modifier.weight(1f)
+                            )
+                            DropdownFilter(
+                                label = "Water Body",
+                                selectedOption = waterBodyFilter,
+                                options = waterBodies,
+                                onOptionSelected = { waterBodyFilter = it },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        DateFilterControls(
+                            selectedFilter = dateFilter,
+                            onFilterChange = { dateFilter = it },
+                            availableMonths = availableMonths,
+                            availableYears = availableYears,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        TextButton(
+                            onClick = {
+                                searchQuery = ""
+                                statusFilter = "All Trips"
+                                waterBodyFilter = "All Water Bodies"
+                                dateFilter = DateRangeFilter.AllDates
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Clear Filters")
+                        }
+                    }
+                }
+            }
+
+            // Results summary shown only when filters are active or panel is open
+            if (showFilters || searchQuery.isNotBlank() || statusFilter != "All Trips" || waterBodyFilter != "All Water Bodies" || dateFilter != DateRangeFilter.AllDates) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Results",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = "${filteredTrips.size} of ${trips.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
                     }
-
-                    DateFilterControls(
-                        selectedFilter = dateFilter,
-                        onFilterChange = { dateFilter = it },
-                        availableMonths = availableMonths,
-                        availableYears = availableYears,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    
-                    Text(
-                        text = "Showing ${filteredTrips.size} of ${trips.size} trips",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
                 }
             }
 

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.platform.testTag
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.util.FormatUtils
@@ -113,7 +114,10 @@ fun CatchListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showFilters = !showFilters }) {
+                    IconButton(
+                        onClick = { showFilters = !showFilters },
+                        modifier = Modifier.testTag("catch_history_filter_button")
+                    ) {
                         Icon(
                             imageVector = if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
                             contentDescription = "Toggle Filters"

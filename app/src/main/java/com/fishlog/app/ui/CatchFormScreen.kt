@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
 import coil.compose.rememberAsyncImagePainter
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.PhotoStorageHelper
@@ -576,7 +577,9 @@ fun CatchFormScreen(
                                     value = quantity,
                                     onValueChange = { if (it.length <= 2) quantity = it.filter { c -> c.isDigit() } },
                                     label = { Text("Number of fish") },
-                                    modifier = Modifier.width(120.dp),
+                                    modifier = Modifier
+                                        .width(120.dp)
+                                        .testTag("catch_quantity_field"),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true
@@ -725,7 +728,8 @@ fun CatchFormScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(56.dp)
+                        .testTag("save_catch_button"),
                     shape = RoundedCornerShape(16.dp),
                     enabled = !isSaving
                 ) {

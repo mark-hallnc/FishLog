@@ -72,6 +72,74 @@ fun SettingsScreen(
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
     var showRestoreConfirm by remember { mutableStateOf(false) }
 
+    var showDeleteAllStep1 by remember { mutableStateOf(false) }
+    var showDeleteAllStep2 by remember { mutableStateOf(false) }
+    var deleteConfirmText by remember { mutableStateOf("") }
+
+    if (showDeleteAllStep1) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAllStep1 = false },
+            title = { Text("Delete all trips and logs?") },
+            text = { Text("This will permanently delete all trips, catches, and no-catch logs from this device. Export or cloud backup your data first if you may want it later. Your settings and account will stay the same.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteAllStep1 = false
+                    showDeleteAllStep2 = true
+                    deleteConfirmText = ""
+                }) {
+                    Text("Continue", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAllStep1 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteAllStep2) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAllStep2 = false },
+            title = { Text("Are you absolutely sure?") },
+            text = {
+                Column {
+                    Text("This cannot be undone unless you restore from a backup. To continue, type DELETE.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = deleteConfirmText,
+                        onValueChange = { deleteConfirmText = it },
+                        placeholder = { Text("Type DELETE") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteAllStep2 = false
+                        viewModel.deleteAllTripsAndLogs { result ->
+                            statusMessage = result
+                            isError = result.contains("Could not", ignoreCase = true)
+                        }
+                    },
+                    enabled = deleteConfirmText == "DELETE",
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Delete Everything")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAllStep2 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     if (showRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
@@ -1153,6 +1221,37 @@ fun SettingsScreen(
                     text = "FishLog stores your data on this device unless you choose to export or back it up.",
                     style = MaterialTheme.typography.bodySmall
                 )
+            }
+
+            // Danger Zone
+            SettingsSection(title = "Danger Zone") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Delete all trips, catches, and no-catch logs from this device. This does not change your settings or account.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showDeleteAllStep1 = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete All Trips & Logs")
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

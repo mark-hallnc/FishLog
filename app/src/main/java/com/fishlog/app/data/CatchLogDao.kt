@@ -29,5 +29,8 @@ interface CatchLogDao {
 
     @Query("UPDATE catch_logs SET photoUri = :photoUri WHERE localUuid = :localUuid")
     suspend fun updatePhotoUriByUuid(localUuid: String, photoUri: String)
+
+    @Query("DELETE FROM catch_logs")
+    suspend fun deleteAllLogs()
 }
 

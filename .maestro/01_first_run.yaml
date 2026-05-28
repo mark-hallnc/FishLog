@@ -1,0 +1,12 @@
+appId: com.fishlog.app
+---
+- clearState
+- launchApp
+- assertVisible: "Welcome to FishLog"
+- assertVisible: "FishLog works offline"
+- assertVisible: "Start a trip"
+- assertVisible: "Log catches and no-catches"
+- assertVisible: "Your data stays yours"
+- tapOn: "Get Started"
+- assertVisible: "FishLog"
+- assertVisible: "Dashboard"

@@ -1,0 +1,19 @@
+appId: com.fishlog.app
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Welcome to FishLog"
+    file: subflows/dismiss_welcome.yaml
+- tapOn:
+    id: "home_settings_button"
+- assertVisible: "Settings"
+- assertVisible: "App Preferences"
+- assertVisible: "Data & Backup"
+- assertVisible: "Cloud Backup"
+- assertVisible: "Full backup for restoring or moving data."
+- assertNotVisible: "JSON backup"
+- assertNotVisible: "path:"
+- assertNotVisible: "Photos: Included"
+- assertVisible: "Active Trip Reminder"
+- assertVisible: "Welcome Guide"
