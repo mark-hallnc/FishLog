@@ -7,9 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +20,8 @@ import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.util.FormatUtils
+import com.fishlog.app.util.DurationUtils
+import com.fishlog.app.util.rememberCurrentMinuteMillis
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -144,6 +144,19 @@ fun TripDetailScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    
+                    if (isActive) {
+                        val currentMinute = rememberCurrentMinuteMillis()
+                        val liveDuration = DurationUtils.formatTripDuration(trip.startTime, now = currentMinute)
+                        Text(
+                            text = "Duration: $liveDuration",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
                     trip.endTime?.let {
                         Text(
                             text = "Ended: ${formatTimestamp(it)}",
@@ -152,7 +165,7 @@ fun TripDetailScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(
-                            text = "Duration: ${formatDuration(trip.startTime, it)}",
+                            text = "Duration: ${DurationUtils.formatTripDuration(trip.startTime, it)}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -241,9 +254,12 @@ fun TripDetailScreen(
                         onClick = onLogCatch,
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null)
+                        Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Log Catch")
                     }
@@ -251,9 +267,12 @@ fun TripDetailScreen(
                         onClick = onLogNoCatch,
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
-                        Icon(Icons.Default.Stop, contentDescription = null)
+                        Icon(Icons.Default.Block, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("No-Catch")
                     }
@@ -448,13 +467,6 @@ fun TripDetailScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
-
-private fun formatDuration(start: Long, end: Long): String {
-    val diff = end - start
-    val hours = diff / (1000 * 60 * 60)
-    val minutes = (diff / (1000 * 60)) % 60
-    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }
 
 private fun formatTimestamp(timestamp: Long): String {

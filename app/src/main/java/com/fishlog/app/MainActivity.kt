@@ -81,6 +81,8 @@ import com.fishlog.app.data.CloudBackupRepository
 import com.fishlog.app.data.WeatherRepository
 import com.fishlog.app.data.WaterBodySuggestionRepository
 import com.fishlog.app.ui.FishLogViewModel
+import com.fishlog.app.util.DurationUtils
+import com.fishlog.app.util.rememberCurrentMinuteMillis
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -1134,6 +1136,15 @@ fun TripStatusCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
+                        val currentMinute = rememberCurrentMinuteMillis()
+                        val liveDuration = DurationUtils.formatTripDuration(activeTrip.startTime, now = currentMinute)
+                        Text(
+                            text = "Duration: $liveDuration",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+
                         if (fishLogViewModel.appPreferences.isActiveTripReminderEnabled()) {
                             Text(
                                 text = "Reminder after ${fishLogViewModel.appPreferences.getActiveTripReminderDelayHours()}h",
@@ -1172,7 +1183,7 @@ fun TripStatusCard(
                         enabled = !isEndingTrip,
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Log Catch")
                     }
@@ -1192,9 +1203,9 @@ fun TripStatusCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedButton(
+                Button(
                     onClick = {
-                        if (isEndingTrip) return@OutlinedButton
+                        if (isEndingTrip) return@Button
                         scope.launch {
                             isEndingTrip = true
                             try {
@@ -1209,12 +1220,15 @@ fun TripStatusCard(
                         .testTag("home_active_trip_end_trip_button"),
                     enabled = !isEndingTrip,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
                 ) {
                     if (isEndingTrip) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.onError,
                             strokeWidth = 2.dp
                         )
                     } else {

@@ -23,6 +23,7 @@ import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.DateFilterControls
+import com.fishlog.app.util.DurationUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -340,7 +341,7 @@ fun TripHistoryCard(
                 if (!isActive) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Duration", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                        Text(formatDuration(trip.startTime, trip.endTime!!), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Text(DurationUtils.formatTripDuration(trip.startTime, trip.endTime!!), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -406,9 +407,3 @@ private fun formatTime(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
-private fun formatDuration(start: Long, end: Long): String {
-    val diff = end - start
-    val hours = diff / (1000 * 60 * 60)
-    val minutes = (diff / (1000 * 60)) % 60
-    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
-}
