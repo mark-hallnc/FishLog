@@ -114,8 +114,28 @@ class FishLogViewModel(
 
     fun refreshCloudBackupStatusFromPrefs() {
         android.util.Log.d("FishLogCloud", "Refreshing backup status from prefs")
-        accountStatus = if (cloudBackupRepository.isSignedIn()) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT
-        accountEmail = cloudBackupRepository.getCurrentAccountEmail()
+        
+        val isSignedIn = cloudBackupRepository.isSignedIn()
+        if (isSignedIn) {
+            if (accountStatus != AccountStatus.SIGNED_IN) {
+                Log.d("FishLogAuth", "Status changed to SIGNED_IN")
+            }
+            accountStatus = AccountStatus.SIGNED_IN
+            accountEmail = cloudBackupRepository.getCurrentAccountEmail()
+            pendingAuthEmail = null
+        } else {
+            // Preserve WAITING_FOR_CODE state during background refreshes
+            if (accountStatus == AccountStatus.WAITING_FOR_CODE && pendingAuthEmail != null) {
+                Log.d("FishLogAuth", "Preserving WAITING_FOR_CODE state for $pendingAuthEmail")
+            } else {
+                if (accountStatus != AccountStatus.SIGNED_OUT) {
+                    Log.d("FishLogAuth", "Status changed to SIGNED_OUT")
+                }
+                accountStatus = AccountStatus.SIGNED_OUT
+                accountEmail = cloudBackupRepository.getCurrentAccountEmail()
+            }
+        }
+
         lastCloudBackupAt = appPreferences.getLastCloudBackupAt()
         lastCloudBackupErrorMessage = appPreferences.getLastCloudBackupErrorMessage()
         cloudBackupMode = appPreferences.getCloudBackupMode()
@@ -154,16 +174,20 @@ class FishLogViewModel(
 
     fun sendSignInCode(email: String) {
         viewModelScope.launch {
+            Log.d("FishLogAuth", "Sending sign-in code to: $email")
             backupUiState = BackupUiState.AUTH_IN_PROGRESS
             val result = cloudBackupRepository.sendSignInCode(email)
             if (result.isSuccess) {
+                Log.d("FishLogAuth", "Code sent successfully. Switching to WAITING_FOR_CODE")
                 pendingAuthEmail = email
                 accountStatus = AccountStatus.WAITING_FOR_CODE
                 backupUiState = BackupUiState.WAITING_FOR_CODE
                 backupStatusMessage = "Check your email for the sign-in code."
             } else {
+                val error = result.exceptionOrNull()?.message ?: "Could not send code."
+                Log.e("FishLogAuth", "Failed to send code: $error")
                 backupUiState = BackupUiState.ERROR
-                backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not send code."
+                backupStatusMessage = error
             }
         }
     }
@@ -174,9 +198,11 @@ class FishLogViewModel(
     fun verifyEmailCode(code: String) {
         val email = pendingAuthEmail ?: return
         viewModelScope.launch {
+            Log.d("FishLogAuth", "Verifying email code for: $email")
             backupUiState = BackupUiState.AUTH_IN_PROGRESS
             val result = cloudBackupRepository.verifyEmailOtp(email, code)
             if (result.isSuccess) {
+                Log.d("FishLogAuth", "Code verified successfully. Signed in.")
                 accountStatus = AccountStatus.SIGNED_IN
                 accountEmail = cloudBackupRepository.getCurrentAccountEmail()
                 pendingAuthEmail = null
@@ -189,8 +215,12 @@ class FishLogViewModel(
                     AutoBackupScheduler.runAutoBackupSoon(applicationContext)
                 }
             } else {
+                val error = result.exceptionOrNull()?.message ?: "Could not verify code. Try again."
+                Log.e("FishLogAuth", "Verification failed: $error")
                 backupUiState = BackupUiState.ERROR
-                backupStatusMessage = result.exceptionOrNull()?.message ?: "Could not verify code. Try again."
+                backupStatusMessage = error
+                // Explicitly keep status as WAITING_FOR_CODE so user can try again
+                accountStatus = AccountStatus.WAITING_FOR_CODE
             }
         }
     }
@@ -224,10 +254,14 @@ class FishLogViewModel(
     }
 
     fun resendCode() {
-        pendingAuthEmail?.let { signIn(it) }
+        pendingAuthEmail?.let { 
+            Log.d("FishLogAuth", "Resending code to: $it")
+            signIn(it) 
+        }
     }
 
     fun changeEmail() {
+        Log.d("FishLogAuth", "Changing email. Resetting to SIGNED_OUT.")
         pendingAuthEmail = null
         accountStatus = AccountStatus.SIGNED_OUT
         backupUiState = BackupUiState.IDLE
@@ -236,9 +270,11 @@ class FishLogViewModel(
 
     fun signOut() {
         viewModelScope.launch {
+            Log.d("FishLogAuth", "Signing out.")
             cloudBackupRepository.signOut()
             accountStatus = AccountStatus.SIGNED_OUT
             accountEmail = null
+            pendingAuthEmail = null
             backupUiState = BackupUiState.IDLE
             backupStatusMessage = null
             refreshCloudBackupStatus()
