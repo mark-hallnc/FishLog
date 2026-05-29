@@ -44,6 +44,7 @@ fun SettingsScreen(
     mapDefaultLat: Double?,
     mapDefaultLon: Double?,
     mapStyle: String,
+    homePhotoSlideshowEnabled: Boolean,
     activeTripReminderEnabled: Boolean,
     activeTripReminderDelay: Int,
     onAppearanceModeChange: (String) -> Unit,
@@ -54,6 +55,7 @@ fun SettingsScreen(
     onViewWelcomeGuide: () -> Unit,
     onResetWelcomeScreen: () -> Unit,
     onMapStyleChange: (String) -> Unit,
+    onHomePhotoSlideshowEnabledChange: (Boolean) -> Unit,
     onActiveTripReminderChange: (Boolean, Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -608,6 +610,15 @@ fun SettingsScreen(
                     subtitle = mapStyleLabel,
                     helperText = "Choose your preferred map view.",
                     onClick = { showMapStyleDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
+                SettingRow(
+                    icon = Icons.Default.PhotoLibrary,
+                    title = "Home Photo Slideshow",
+                    subtitle = if (homePhotoSlideshowEnabled) "On" else "Off",
+                    helperText = "Show your logged catch photos in the Home screen header.",
+                    onClick = { onHomePhotoSlideshowEnabledChange(!homePhotoSlideshowEnabled) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 

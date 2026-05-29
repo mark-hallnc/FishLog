@@ -37,6 +37,7 @@ class AppPreferences(context: Context) {
         private const val KEY_AUTO_BACKUP_LAST_WORKER_MESSAGE = "auto_backup_last_worker_message"
         private const val KEY_REMINDER_ENABLED = "active_trip_reminder_enabled"
         private const val KEY_REMINDER_DELAY = "active_trip_reminder_delay_hours"
+        private const val KEY_HOME_PHOTO_SLIDESHOW_ENABLED = "home_photo_slideshow_enabled"
 
         const val MAP_CENTER_CURRENT = "CURRENT_LOCATION"
         const val MAP_CENTER_SAVED = "SAVED_LOCATION"
@@ -254,5 +255,13 @@ class AppPreferences(context: Context) {
             .remove(KEY_MAP_LONGITUDE)
             .remove(KEY_MAP_ZOOM)
             .apply()
+    }
+
+    fun isHomePhotoSlideshowEnabled(): Boolean {
+        return prefs.getBoolean(KEY_HOME_PHOTO_SLIDESHOW_ENABLED, true)
+    }
+
+    fun setHomePhotoSlideshowEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_HOME_PHOTO_SLIDESHOW_ENABLED, enabled).apply()
     }
 }

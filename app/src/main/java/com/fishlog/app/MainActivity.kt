@@ -143,6 +143,7 @@ class MainActivity : ComponentActivity() {
             var mapDefaultLon by remember { mutableStateOf(appPreferences.getMapLongitude()) }
             var mapDefaultZoom by remember { mutableStateOf(appPreferences.getMapZoom()) }
             var mapStyle by remember { mutableStateOf(appPreferences.getMapStyle()) }
+            var homePhotoSlideshowEnabled by remember { mutableStateOf(appPreferences.isHomePhotoSlideshowEnabled()) }
 
             var activeTripReminderEnabled by remember { mutableStateOf(appPreferences.isActiveTripReminderEnabled()) }
             var activeTripReminderDelay by remember { mutableStateOf(appPreferences.getActiveTripReminderDelayHours()) }
@@ -163,6 +164,7 @@ class MainActivity : ComponentActivity() {
                     mapDefaultLon = mapDefaultLon,
                     mapDefaultZoom = mapDefaultZoom,
                     mapStyle = mapStyle,
+                    homePhotoSlideshowEnabled = homePhotoSlideshowEnabled,
                     activeTripReminderEnabled = activeTripReminderEnabled,
                     activeTripReminderDelay = activeTripReminderDelay,
                     onAppearanceModeChange = { mode ->
@@ -192,6 +194,10 @@ class MainActivity : ComponentActivity() {
                         mapStyle = style
                         appPreferences.setMapStyle(style)
                     },
+                    onHomePhotoSlideshowEnabledChange = { enabled ->
+                        homePhotoSlideshowEnabled = enabled
+                        appPreferences.setHomePhotoSlideshowEnabled(enabled)
+                    },
                     onActiveTripReminderChange = { enabled, delay ->
                         android.util.Log.d("FishLogReminder", "Setting changed: enabled=$enabled, delay=$delay")
                         activeTripReminderEnabled = enabled
@@ -214,6 +220,7 @@ fun MainScreen(
     mapDefaultLon: Double?,
     mapDefaultZoom: Double,
     mapStyle: String,
+    homePhotoSlideshowEnabled: Boolean,
     activeTripReminderEnabled: Boolean,
     activeTripReminderDelay: Int,
     onAppearanceModeChange: (String) -> Unit,
@@ -222,6 +229,7 @@ fun MainScreen(
     onSetDefaultMapLocation: (Double, Double, Double) -> Unit,
     onClearDefaultMapLocation: () -> Unit,
     onMapStyleChange: (String) -> Unit,
+    onHomePhotoSlideshowEnabledChange: (Boolean) -> Unit,
     onActiveTripReminderChange: (Boolean, Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -330,6 +338,7 @@ fun MainScreen(
             )
             "Home" -> HomeScreen(
                 fishLogViewModel = viewModel,
+                homePhotoSlideshowEnabled = homePhotoSlideshowEnabled,
                 onLogCatchClick = { 
                     selectedCatch = null
                     currentScreen = "Form" 
@@ -634,6 +643,7 @@ fun MainScreen(
                 mapDefaultLat = mapDefaultLat,
                 mapDefaultLon = mapDefaultLon,
                 mapStyle = mapStyle,
+                homePhotoSlideshowEnabled = homePhotoSlideshowEnabled,
                 activeTripReminderEnabled = activeTripReminderEnabled,
                 activeTripReminderDelay = activeTripReminderDelay,
                 onAppearanceModeChange = onAppearanceModeChange,
@@ -649,6 +659,7 @@ fun MainScreen(
                     appPreferences.setHasSeenFirstRun(false)
                 },
                 onMapStyleChange = onMapStyleChange,
+                onHomePhotoSlideshowEnabledChange = onHomePhotoSlideshowEnabledChange,
                 onActiveTripReminderChange = onActiveTripReminderChange,
                 onBack = { handleBack() }
             )
@@ -659,6 +670,7 @@ fun MainScreen(
 @Composable
 fun HomeScreen(
     fishLogViewModel: FishLogViewModel,
+    homePhotoSlideshowEnabled: Boolean = true,
     onLogCatchClick: () -> Unit,
     onLogNoCatchClick: () -> Unit,
     onHistoryClick: () -> Unit,
@@ -677,8 +689,12 @@ fun HomeScreen(
     val catches by fishLogViewModel.allCatches.collectAsState()
     val trips by fishLogViewModel.allTrips.collectAsState()
 
-    val catchPhotos = remember(catches) {
-        catches.filter { it.logType == "CATCH" && !it.photoUri.isNullOrBlank() }.map { it.photoUri!! }
+    val catchPhotos = remember(catches, homePhotoSlideshowEnabled) {
+        if (homePhotoSlideshowEnabled) {
+            catches.filter { it.logType == "CATCH" && !it.photoUri.isNullOrBlank() }.map { it.photoUri!! }
+        } else {
+            emptyList()
+        }
     }
 
     var currentPhotoIndex by remember { mutableIntStateOf(0) }
