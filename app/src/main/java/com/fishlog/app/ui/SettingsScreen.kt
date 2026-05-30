@@ -613,12 +613,12 @@ fun SettingsScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-                SettingRow(
+                SettingsSwitchRow(
                     icon = Icons.Default.PhotoLibrary,
                     title = "Home Photo Slideshow",
-                    subtitle = if (homePhotoSlideshowEnabled) "On" else "Off",
+                    checked = homePhotoSlideshowEnabled,
                     helperText = "Show your logged catch photos in the Home screen header.",
-                    onClick = { onHomePhotoSlideshowEnabledChange(!homePhotoSlideshowEnabled) }
+                    onCheckedChange = onHomePhotoSlideshowEnabledChange
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -1288,6 +1288,48 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
             )
             content()
         }
+    }
+}
+
+@Composable
+fun SettingsSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector? = null,
+    helperText: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            if (helperText != null) {
+                Text(
+                    text = helperText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }
 
