@@ -22,6 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.platform.testTag
 import com.fishlog.app.data.CatchLog
+import com.fishlog.app.data.FishingTrip
 import com.fishlog.app.data.AppPreferences
 import com.fishlog.app.util.FormatUtils
 import java.text.SimpleDateFormat
@@ -73,7 +74,9 @@ fun CatchListScreen(
         }.distinct().sortedDescending()
     }
 
-    val filteredCatches = remember(catches, searchQuery, selectedSpecies, selectedBait, gpsFilter, logTypeFilter, dateFilter) {
+    val trips by viewModel.allTrips.collectAsState()
+    
+    val filteredCatches = remember(catches, trips, searchQuery, selectedSpecies, selectedBait, gpsFilter, logTypeFilter, dateFilter) {
         catches.filter { catch ->
             val matchesSearch = if (searchQuery.isBlank()) true else {
                 val query = searchQuery.lowercase()
@@ -219,12 +222,13 @@ fun CatchListScreen(
                     contentPadding = PaddingValues(bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredCatches) { catch ->
+                    items(filteredCatches, key = { it.id }) { catch ->
+                        val trip = remember(trips, catch.tripId) { trips.find { it.id == catch.tripId } }
                         CatchItem(
                             catch = catch,
                             onClick = { onCatchClick(catch) },
                             onPhotoClick = onPhotoClick,
-                            viewModel = viewModel,
+                            trip = trip,
                             unitSystem = unitSystem
                         )
                     }
@@ -417,7 +421,7 @@ fun CatchItem(
     catch: CatchLog,
     onClick: () -> Unit,
     onPhotoClick: (String) -> Unit = {},
-    viewModel: FishLogViewModel? = null,
+    trip: FishingTrip? = null,
     unitSystem: String = AppPreferences.UNITS_US
 ) {
     val isNoCatch = catch.logType == "NO_CATCH"
@@ -426,8 +430,6 @@ fun CatchItem(
     val depthSuffix = if (isMetric) "m" else "ft"
     val lengthSuffix = if (isMetric) "cm" else "in"
     val weightSuffix = if (isMetric) "kg" else "lbs"
-    val trips by (viewModel?.allTrips?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
-    val trip = remember(trips, catch.tripId) { trips.find { it.id == catch.tripId } }
     
     Card(
         modifier = Modifier

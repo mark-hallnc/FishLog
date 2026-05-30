@@ -2,9 +2,9 @@ package com.fishlog.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -83,6 +83,7 @@ fun TripDetailScreen(
         )
     }
 
+    android.util.Log.d("FishLogPerf", "TripDetailScreen: tripLogs count = ${tripLogs.size}")
     Scaffold(
         topBar = {
             TopAppBar(
@@ -100,225 +101,236 @@ fun TripDetailScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
                 .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(16.dp)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = trip.name,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (trip.waterBody.isNotBlank()) {
-                        Text(
-                            text = trip.waterBody,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.secondary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Started: ${formatTimestamp(trip.startTime)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    
-                    if (isActive) {
-                        val currentMinute = rememberCurrentMinuteMillis()
-                        val liveDuration = DurationUtils.formatTripDuration(trip.startTime, now = currentMinute)
-                        Text(
-                            text = "Duration: $liveDuration",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    trip.endTime?.let {
-                        Text(
-                            text = "Ended: ${formatTimestamp(it)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Text(
-                            text = "Duration: ${DurationUtils.formatTripDuration(trip.startTime, it)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            if (isActive && forecast != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Today's Forecast",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = trip.name,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        
+                        if (trip.waterBody.isNotBlank()) {
+                            Text(
+                                text = trip.waterBody,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.secondary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = buildString {
-                                append(forecast.condition)
-                                if (forecast.highTempF != null && forecast.lowTempF != null) {
-                                    append(" · ${FormatUtils.formatWholeNumber(forecast.highTempF)}°/${FormatUtils.formatWholeNumber(forecast.lowTempF)}°")
-                                }
-                                if (forecast.windSpeedMph != null) {
-                                    append(" · Wind ${FormatUtils.formatWholeNumber(forecast.windSpeedMph)} mph")
-                                    val dir = getWindDirection(forecast.windDirectionDegrees)
-                                    if (dir.isNotBlank()) append(" $dir")
-                                }
-                            },
+                            text = "Started: ${formatTimestamp(trip.startTime)}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        
+                        if (isActive) {
+                            val currentMinute = rememberCurrentMinuteMillis()
+                            val liveDuration = DurationUtils.formatTripDuration(trip.startTime, now = currentMinute)
+                            Text(
+                                text = "Duration: $liveDuration",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        trip.endTime?.let {
+                            Text(
+                                text = "Ended: ${formatTimestamp(it)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                text = "Duration: ${DurationUtils.formatTripDuration(trip.startTime, it)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (isActive && forecast != null) {
+                item {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Today's Forecast",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            
+                            Text(
+                                text = buildString {
+                                    append(forecast.condition)
+                                    if (forecast.highTempF != null && forecast.lowTempF != null) {
+                                        append(" · ${FormatUtils.formatWholeNumber(forecast.highTempF)}°/${FormatUtils.formatWholeNumber(forecast.lowTempF)}°")
+                                    }
+                                    if (forecast.windSpeedMph != null) {
+                                        append(" · Wind ${FormatUtils.formatWholeNumber(forecast.windSpeedMph)} mph")
+                                        val dir = getWindDirection(forecast.windDirectionDegrees)
+                                        if (dir.isNotBlank()) append(" $dir")
+                                    }
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
 
             // Edit and Delete actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = { onEditTrip(trip) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit Trip")
-                }
-                OutlinedButton(
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Delete Trip")
-                }
-            }
-
-            if (trip.endTime == null) {
-                var isEndingTrip by remember { mutableStateOf(false) }
-                val scope = rememberCoroutineScope()
-
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = onLogCatch,
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                        onClick = { onEditTrip(trip) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Log Catch")
+                        Text("Edit Trip")
                     }
-                    Button(
-                        onClick = onLogNoCatch,
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Icon(Icons.Default.Block, contentDescription = null)
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("No-Catch")
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        if (isEndingTrip) return@Button
-                        isEndingTrip = true
-                        scope.launch {
-                            try {
-                                viewModel.endTrip(trip)
-                                onTripEnded(trip.copy(endTime = System.currentTimeMillis()))
-                            } catch (e: Exception) {
-                                isEndingTrip = false
-                                // Optional: Show error
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    enabled = !isEndingTrip
-                ) {
-                    if (isEndingTrip) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onError,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Ending Trip...", style = MaterialTheme.typography.titleMedium)
-                    } else {
-                        Icon(Icons.Default.Stop, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("End Trip", style = MaterialTheme.typography.titleMedium)
+                        Text("Delete Trip")
                     }
                 }
             }
 
-            InsightCard(title = "Trip Summary") {
-                val catchCount = tripLogs.count { it.logType == "CATCH" }
-                val noCatchCount = tripLogs.count { it.logType == "NO_CATCH" }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatItem("Catches", catchCount.toString(), Modifier.weight(1f))
-                    StatItem("No-Catches", noCatchCount.toString(), Modifier.weight(1f))
+            if (trip.endTime == null) {
+                item {
+                    var isEndingTrip by remember { mutableStateOf(false) }
+                    val scope = rememberCoroutineScope()
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = onLogCatch,
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Log Catch")
+                            }
+                            Button(
+                                onClick = onLogNoCatch,
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Icon(Icons.Default.Block, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("No-Catch")
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (isEndingTrip) return@Button
+                                isEndingTrip = true
+                                scope.launch {
+                                    try {
+                                        viewModel.endTrip(trip)
+                                        onTripEnded(trip.copy(endTime = System.currentTimeMillis()))
+                                    } catch (e: Exception) {
+                                        isEndingTrip = false
+                                        // Optional: Show error
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            enabled = !isEndingTrip
+                        ) {
+                            if (isEndingTrip) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onError,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Ending Trip...", style = MaterialTheme.typography.titleMedium)
+                            } else {
+                                Icon(Icons.Default.Stop, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("End Trip", style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                InsightCard(title = "Trip Summary") {
+                    val catchCount = remember(tripLogs) { tripLogs.count { it.logType == "CATCH" } }
+                    val noCatchCount = remember(tripLogs) { tripLogs.count { it.logType == "NO_CATCH" } }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        StatItem("Catches", catchCount.toString(), Modifier.weight(1f))
+                        StatItem("No-Catches", noCatchCount.toString(), Modifier.weight(1f))
+                    }
                 }
             }
 
@@ -327,122 +339,126 @@ fun TripDetailScreen(
                     trip.weatherAutoFilled || trip.weatherSummary.isNotBlank()
 
             if (hasConditions) {
-                InsightCard(title = "Conditions") {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // 1. Condition
-                        val conditionValue = buildString {
-                            if (trip.weatherSummary.isNotBlank()) {
-                                append(trip.weatherSummary)
-                                if (trip.skyCondition.isNotBlank() && !trip.skyCondition.equals(trip.weatherSummary, ignoreCase = true)) {
-                                    append(" · noted: ${trip.skyCondition}")
-                                }
-                            } else if (trip.skyCondition.isNotBlank()) {
-                                append(trip.skyCondition)
-                            }
-                        }
-                        if (conditionValue.isNotBlank()) {
-                            ConditionDetailItem("Condition", conditionValue)
-                        }
-
-                        // 2. Air Temp
-                        val tempValue = buildString {
-                            if (trip.airTempF != null) {
-                                append("${FormatUtils.formatWholeNumber(trip.airTempF)}°$tempSuffix")
-                                if (trip.feelsLikeF != null) {
-                                    append(" · feels like ${FormatUtils.formatWholeNumber(trip.feelsLikeF)}°$tempSuffix")
-                                }
-                            } else if (trip.feelsLikeF != null) {
-                                append("Feels like ${FormatUtils.formatWholeNumber(trip.feelsLikeF)}°$tempSuffix")
-                            }
-                        }
-                        if (tempValue.isNotBlank()) {
-                            ConditionDetailItem("Air Temp", tempValue)
-                        }
-
-                        // 3. Wind
-                        val windValue = buildString {
-                            if (trip.windCondition.isNotBlank()) {
-                                append(trip.windCondition)
-                            }
-                            if (trip.windSpeedMph != null) {
-                                if (this.isNotEmpty()) append(" · ")
-                                append("${FormatUtils.formatWholeNumber(trip.windSpeedMph)} mph")
-                                val dir = getWindDirection(trip.windDirectionDegrees)
-                                if (dir.isNotBlank()) append(" $dir")
-                                if (trip.windGustMph != null && trip.windGustMph > (trip.windSpeedMph ?: 0.0) + 2) {
-                                    append(" · gusts ${FormatUtils.formatWholeNumber(trip.windGustMph)} mph")
+                item {
+                    InsightCard(title = "Conditions") {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            // 1. Condition
+                            val conditionValue = buildString {
+                                if (trip.weatherSummary.isNotBlank()) {
+                                    append(trip.weatherSummary)
+                                    if (trip.skyCondition.isNotBlank() && !trip.skyCondition.equals(trip.weatherSummary, ignoreCase = true)) {
+                                        append(" · noted: ${trip.skyCondition}")
+                                    }
+                                } else if (trip.skyCondition.isNotBlank()) {
+                                    append(trip.skyCondition)
                                 }
                             }
-                        }
-                        if (windValue.isNotBlank()) {
-                            ConditionDetailItem("Wind", windValue)
-                        }
-
-                        // 4. Pressure
-                        val pressureValue = buildString {
-                            if (trip.barometricPressureHpa != null) {
-                                append("${FormatUtils.formatWholeNumber(trip.barometricPressureHpa)} hPa")
+                            if (conditionValue.isNotBlank()) {
+                                ConditionDetailItem("Condition", conditionValue)
                             }
-                            if (trip.pressureTrend.isNotBlank()) {
-                                if (this.isNotEmpty()) append(" ")
-                                append(getPressureTrendIcon(trip.pressureTrend))
-                                append(" ${trip.pressureTrend}")
+
+                            // 2. Air Temp
+                            val tempValue = buildString {
+                                if (trip.airTempF != null) {
+                                    append("${FormatUtils.formatWholeNumber(trip.airTempF)}°$tempSuffix")
+                                    if (trip.feelsLikeF != null) {
+                                        append(" · feels like ${FormatUtils.formatWholeNumber(trip.feelsLikeF)}°$tempSuffix")
+                                    }
+                                } else if (trip.feelsLikeF != null) {
+                                    append("Feels like ${FormatUtils.formatWholeNumber(trip.feelsLikeF)}°$tempSuffix")
+                                }
                             }
-                        }
-                        if (pressureValue.isNotBlank()) {
-                            ConditionDetailItem("Pressure", pressureValue)
-                        }
+                            if (tempValue.isNotBlank()) {
+                                ConditionDetailItem("Air Temp", tempValue)
+                            }
 
-                        // 5. Humidity, Cloud Cover, Precipitation
-                        if (trip.humidityPercent != null) {
-                            ConditionDetailItem("Humidity", "${FormatUtils.formatWholeNumber(trip.humidityPercent)}%")
-                        }
-                        if (trip.cloudCoverPercent != null) {
-                            ConditionDetailItem("Cloud Cover", "${FormatUtils.formatWholeNumber(trip.cloudCoverPercent)}%")
-                        }
-                        if (trip.precipitationIn != null && trip.precipitationIn > 0) {
-                            ConditionDetailItem("Precipitation", "${FormatUtils.formatDecimal(trip.precipitationIn)} in")
-                        }
+                            // 3. Wind
+                            val windValue = buildString {
+                                if (trip.windCondition.isNotBlank()) {
+                                    append(trip.windCondition)
+                                }
+                                if (trip.windSpeedMph != null) {
+                                    if (this.isNotEmpty()) append(" · ")
+                                    append("${FormatUtils.formatWholeNumber(trip.windSpeedMph)} mph")
+                                    val dir = getWindDirection(trip.windDirectionDegrees)
+                                    if (dir.isNotBlank()) append(" $dir")
+                                    if (trip.windGustMph != null && trip.windGustMph > (trip.windSpeedMph ?: 0.0) + 2) {
+                                        append(" · gusts ${FormatUtils.formatWholeNumber(trip.windGustMph)} mph")
+                                    }
+                                }
+                            }
+                            if (windValue.isNotBlank()) {
+                                ConditionDetailItem("Wind", windValue)
+                            }
 
-                        // 6. Water Clarity
-                        if (trip.waterClarity.isNotBlank()) {
-                            ConditionDetailItem("Water Clarity", trip.waterClarity)
-                        }
+                            // 4. Pressure
+                            val pressureValue = buildString {
+                                if (trip.barometricPressureHpa != null) {
+                                    append("${FormatUtils.formatWholeNumber(trip.barometricPressureHpa)} hPa")
+                                }
+                                if (trip.pressureTrend.isNotBlank()) {
+                                    if (this.isNotEmpty()) append(" ")
+                                    append(getPressureTrendIcon(trip.pressureTrend))
+                                    append(" ${trip.pressureTrend}")
+                                }
+                            }
+                            if (pressureValue.isNotBlank()) {
+                                ConditionDetailItem("Pressure", pressureValue)
+                            }
 
-                        if (trip.weatherAutoFilled) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Auto-filled weather",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
-                            )
+                            // 5. Humidity, Cloud Cover, Precipitation
+                            if (trip.humidityPercent != null) {
+                                ConditionDetailItem("Humidity", "${FormatUtils.formatWholeNumber(trip.humidityPercent)}%")
+                            }
+                            if (trip.cloudCoverPercent != null) {
+                                ConditionDetailItem("Cloud Cover", "${FormatUtils.formatWholeNumber(trip.cloudCoverPercent)}%")
+                            }
+                            if (trip.precipitationIn != null && trip.precipitationIn > 0) {
+                                ConditionDetailItem("Precipitation", "${FormatUtils.formatDecimal(trip.precipitationIn)} in")
+                            }
+
+                            // 6. Water Clarity
+                            if (trip.waterClarity.isNotBlank()) {
+                                ConditionDetailItem("Water Clarity", trip.waterClarity)
+                            }
+
+                            if (trip.weatherAutoFilled) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Auto-filled weather",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
             }
 
             if (trip.moonPhaseName.isNotBlank()) {
-                InsightCard(title = "Moon") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        MoonPhaseIcon(
-                            illuminationPercent = trip.moonIlluminationPercent,
-                            waxing = trip.moonWaxing,
-                            phaseName = trip.moonPhaseName,
-                            size = 56.dp
-                        )
-                        
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem("Phase", trip.moonPhaseName, Modifier.weight(1f))
-                                StatItem("Illumination", "${FormatUtils.formatWholeNumber(trip.moonIlluminationPercent)}%", Modifier.weight(1f))
-                            }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem("Moon Age", "${FormatUtils.formatDecimal(trip.moonAgeDays)} days", Modifier.weight(1f))
-                                StatItem("Trend", if (trip.moonWaxing == true) "Waxing" else "Waning", Modifier.weight(1f))
+                item {
+                    InsightCard(title = "Moon") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            MoonPhaseIcon(
+                                illuminationPercent = trip.moonIlluminationPercent,
+                                waxing = trip.moonWaxing,
+                                phaseName = trip.moonPhaseName,
+                                size = 56.dp
+                            )
+                            
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                    StatItem("Phase", trip.moonPhaseName, Modifier.weight(1f))
+                                    StatItem("Illumination", "${FormatUtils.formatWholeNumber(trip.moonIlluminationPercent)}%", Modifier.weight(1f))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                    StatItem("Moon Age", "${FormatUtils.formatDecimal(trip.moonAgeDays)} days", Modifier.weight(1f))
+                                    StatItem("Trend", if (trip.moonWaxing == true) "Waxing" else "Waning", Modifier.weight(1f))
+                                }
                             }
                         }
                     }
@@ -450,21 +466,40 @@ fun TripDetailScreen(
             }
 
             if (trip.notes.isNotBlank()) {
-                InsightCard(title = "Notes") {
-                    Text(trip.notes, style = MaterialTheme.typography.bodyLarge)
+                item {
+                    InsightCard(title = "Notes") {
+                        Text(trip.notes, style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
 
             if (tripLogs.isNotEmpty()) {
-                Text("Logs in this Trip", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                tripLogs.forEach { log ->
-                    CatchItem(catch = log, onClick = { onLogClick(log) }, unitSystem = unitSystem)
+                item {
+                    Text(
+                        "Logs in this Trip (${tripLogs.size})",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                items(tripLogs, key = { it.id }) { log ->
+                    CatchItem(
+                        catch = log, 
+                        onClick = { onLogClick(log) }, 
+                        trip = trip,
+                        unitSystem = unitSystem
+                    )
                 }
             } else {
-                Text("No logs for this trip yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp))
+                item {
+                    Text("No logs for this trip yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp))
+                }
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 }
