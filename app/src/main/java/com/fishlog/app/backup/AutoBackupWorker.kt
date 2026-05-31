@@ -52,6 +52,20 @@ class AutoBackupWorker(
             return androidx.work.ListenableWorker.Result.success()
         }
 
+        // 2b. Check frequency window
+        val lastBackupAt = prefs.getLastCloudBackupAt()
+        val freqHours = prefs.getCloudBackupFrequencyHours()
+        if (lastBackupAt != null) {
+            val nextAllowedAt = lastBackupAt + (freqHours * 60 * 60 * 1000L)
+            if (now < nextAllowedAt) {
+                Log.d(TAG, "Auto backup worker: Frequency window not reached. Rescheduling.")
+                prefs.setAutoBackupInProgress(false)
+                prefs.setAutoBackupWorkerMessage("Waiting for backup window")
+                AutoBackupScheduler.scheduleAutoBackup(applicationContext)
+                return androidx.work.ListenableWorker.Result.success()
+            }
+        }
+
         try {
             Log.d(TAG, "Auto backup worker: Fetching logs and trips...")
             

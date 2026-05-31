@@ -38,6 +38,7 @@ class AppPreferences(context: Context) {
         private const val KEY_REMINDER_ENABLED = "active_trip_reminder_enabled"
         private const val KEY_REMINDER_DELAY = "active_trip_reminder_delay_hours"
         private const val KEY_HOME_PHOTO_SLIDESHOW_ENABLED = "home_photo_slideshow_enabled"
+        private const val KEY_CLOUD_BACKUP_FREQUENCY = "cloud_backup_frequency"
 
         const val MAP_CENTER_CURRENT = "CURRENT_LOCATION"
         const val MAP_CENTER_SAVED = "SAVED_LOCATION"
@@ -48,6 +49,11 @@ class AppPreferences(context: Context) {
 
         const val CLOUD_BACKUP_MODE_MANUAL = "manual"
         const val CLOUD_BACKUP_MODE_AUTOMATIC = "automatic"
+
+        const val CLOUD_BACKUP_FREQUENCY_HOURLY = "hourly"
+        const val CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS = "every_6_hours"
+        const val CLOUD_BACKUP_FREQUENCY_TWICE_DAILY = "twice_daily"
+        const val CLOUD_BACKUP_FREQUENCY_DAILY = "daily"
     }
 
     enum class DefaultMapCenterMode {
@@ -263,5 +269,33 @@ class AppPreferences(context: Context) {
 
     fun setHomePhotoSlideshowEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_HOME_PHOTO_SLIDESHOW_ENABLED, enabled).apply()
+    }
+
+    fun getCloudBackupFrequency(): String {
+        return prefs.getString(KEY_CLOUD_BACKUP_FREQUENCY, CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS) ?: CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS
+    }
+
+    fun setCloudBackupFrequency(frequency: String) {
+        prefs.edit().putString(KEY_CLOUD_BACKUP_FREQUENCY, frequency).apply()
+    }
+
+    fun getCloudBackupFrequencyHours(): Int {
+        return when (getCloudBackupFrequency()) {
+            CLOUD_BACKUP_FREQUENCY_HOURLY -> 1
+            CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS -> 6
+            CLOUD_BACKUP_FREQUENCY_TWICE_DAILY -> 12
+            CLOUD_BACKUP_FREQUENCY_DAILY -> 24
+            else -> 6
+        }
+    }
+
+    fun getCloudBackupFrequencyLabel(): String {
+        return when (getCloudBackupFrequency()) {
+            CLOUD_BACKUP_FREQUENCY_HOURLY -> "Every hour"
+            CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS -> "Every 6 hours"
+            CLOUD_BACKUP_FREQUENCY_TWICE_DAILY -> "Twice daily"
+            CLOUD_BACKUP_FREQUENCY_DAILY -> "Daily"
+            else -> "Every 6 hours"
+        }
     }
 }

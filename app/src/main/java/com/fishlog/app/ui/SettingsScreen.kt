@@ -249,6 +249,46 @@ fun SettingsScreen(
     var showMapCenterDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
     var showMapStyleDialog by remember { mutableStateOf(false) }
+    var showBackupFrequencyDialog by remember { mutableStateOf(false) }
+
+    if (showBackupFrequencyDialog) {
+        AlertDialog(
+            onDismissRequest = { showBackupFrequencyDialog = false },
+            title = { Text("Automatic Backup Frequency") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Choose how often FishLog is allowed to back up pending changes.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    val options = listOf(
+                        AppPreferences.CLOUD_BACKUP_FREQUENCY_HOURLY to "Every hour",
+                        AppPreferences.CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS to "Every 6 hours",
+                        AppPreferences.CLOUD_BACKUP_FREQUENCY_TWICE_DAILY to "Twice daily",
+                        AppPreferences.CLOUD_BACKUP_FREQUENCY_DAILY to "Daily"
+                    )
+
+                    options.forEach { (value, label) ->
+                        AppearanceOption(
+                            label = label,
+                            selected = viewModel.cloudBackupFrequency == value,
+                            onClick = {
+                                viewModel.updateCloudBackupFrequency(value)
+                                showBackupFrequencyDialog = false
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBackupFrequencyDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
 
     if (showMapStyleDialog) {
         AlertDialog(
@@ -814,6 +854,14 @@ fun SettingsScreen(
                                     }
                                 }
                                 
+                                if (status.isAutomatic) {
+                                    Text(
+                                        text = "Automatic frequency: ${viewModel.getCloudBackupFrequencyLabel()}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                
                                 if (workerMsg != null && status.isPending) {
                                     Text(
                                         text = "Status: $workerMsg",
@@ -890,6 +938,16 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
+
+                        if (viewModel.cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC) {
+                            SettingRow(
+                                title = "Backup Frequency",
+                                subtitle = viewModel.getCloudBackupFrequencyLabel(),
+                                helperText = "FishLog backs up pending changes when internet is available and the selected backup window is reached.",
+                                onClick = { showBackupFrequencyDialog = true }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
                         if (viewModel.accountStatus == AccountStatus.SIGNED_OUT) {
                             var email by remember { mutableStateOf("") }

@@ -38,6 +38,9 @@ class FishLogViewModel(
     var cloudBackupMode by mutableStateOf(appPreferences.getCloudBackupMode())
         private set
 
+    var cloudBackupFrequency by mutableStateOf(appPreferences.getCloudBackupFrequency())
+        private set
+
     var cloudBackupPending by mutableStateOf(appPreferences.getCloudBackupPending())
         private set
 
@@ -139,6 +142,7 @@ class FishLogViewModel(
         lastCloudBackupAt = appPreferences.getLastCloudBackupAt()
         lastCloudBackupErrorMessage = appPreferences.getLastCloudBackupErrorMessage()
         cloudBackupMode = appPreferences.getCloudBackupMode()
+        cloudBackupFrequency = appPreferences.getCloudBackupFrequency()
         cloudBackupPending = appPreferences.getCloudBackupPending()
         refreshCloudBackupStatus()
     }
@@ -231,10 +235,31 @@ class FishLogViewModel(
         refreshCloudBackupStatus()
         if (mode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC) {
             if (appPreferences.getCloudBackupPending() && cloudBackupRepository.isSignedIn()) {
-                AutoBackupScheduler.runAutoBackupSoon(applicationContext)
+                AutoBackupScheduler.scheduleAutoBackup(applicationContext)
             }
         } else {
             AutoBackupScheduler.cancelAutoBackup(applicationContext)
+        }
+    }
+
+    fun updateCloudBackupFrequency(frequency: String) {
+        appPreferences.setCloudBackupFrequency(frequency)
+        cloudBackupFrequency = frequency
+        refreshCloudBackupStatus()
+        if (cloudBackupMode == AppPreferences.CLOUD_BACKUP_MODE_AUTOMATIC) {
+            if (appPreferences.getCloudBackupPending() && cloudBackupRepository.isSignedIn()) {
+                AutoBackupScheduler.scheduleAutoBackup(applicationContext)
+            }
+        }
+    }
+
+    fun getCloudBackupFrequencyLabel(): String {
+        return when (cloudBackupFrequency) {
+            AppPreferences.CLOUD_BACKUP_FREQUENCY_HOURLY -> "Every hour"
+            AppPreferences.CLOUD_BACKUP_FREQUENCY_EVERY_6_HOURS -> "Every 6 hours"
+            AppPreferences.CLOUD_BACKUP_FREQUENCY_TWICE_DAILY -> "Twice daily"
+            AppPreferences.CLOUD_BACKUP_FREQUENCY_DAILY -> "Daily"
+            else -> "Every 6 hours"
         }
     }
 

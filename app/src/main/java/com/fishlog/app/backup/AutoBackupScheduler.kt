@@ -15,9 +15,26 @@ object AutoBackupScheduler {
     const val AUTO_BACKUP_SOON_DELAY_SECONDS = 30L
 
     fun scheduleAutoBackup(context: Context) {
-        Log.d(TAG, "scheduleAutoBackup called")
         val prefs = AppPreferences(context)
-        prefs.setAutoBackupScheduled(System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        
+        val selectedHours = prefs.getCloudBackupFrequencyHours()
+        val lastBackupAt = prefs.getLastCloudBackupAt()
+        
+        // shortDebounce: 10 minutes (matching existing constant)
+        val shortDebounceMillis = AUTO_BACKUP_DELAY_MINUTES * 60 * 1000L
+        
+        val nextAllowedAt = if (lastBackupAt == null) {
+            now + shortDebounceMillis
+        } else {
+            lastBackupAt + (selectedHours * 60 * 60 * 1000L)
+        }
+        
+        val delayMillis = (nextAllowedAt - now).coerceAtLeast(shortDebounceMillis)
+        
+        Log.d(TAG, "scheduleAutoBackup: freq=${prefs.getCloudBackupFrequency()}, lastBackupAt=$lastBackupAt, nextAllowedAt=$nextAllowedAt, delayMinutes=${delayMillis / 60000}")
+        
+        prefs.setAutoBackupScheduled(now)
         prefs.setAutoBackupWorkerMessage("Backup scheduled")
         prefs.markCloudBackupPending()
 
@@ -27,7 +44,7 @@ object AutoBackupScheduler {
 
         val workRequest = OneTimeWorkRequestBuilder<AutoBackupWorker>()
             .setConstraints(constraints)
-            .setInitialDelay(AUTO_BACKUP_DELAY_MINUTES, TimeUnit.MINUTES)
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
