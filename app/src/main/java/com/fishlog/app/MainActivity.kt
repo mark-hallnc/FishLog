@@ -54,6 +54,7 @@ import com.fishlog.app.ui.TripReviewScreen
 import com.fishlog.app.ui.FirstRunScreen
 import com.fishlog.app.ui.PatternDetailScreen
 import com.fishlog.app.ui.PhotoViewerScreen
+import com.fishlog.app.ui.PredictiveSuggestionsScreen
 import com.fishlog.app.ui.theme.FishLogTheme
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
@@ -293,13 +294,15 @@ fun MainScreen(
     fun handleBack() {
         android.util.Log.d("FishLogNav", "Back pressed on screen: $currentScreen")
         when (currentScreen) {
-            "History", "Map", "Insights", "AdvancedAnalytics", "TripHistory", "Settings", "StartTrip" -> {
+            "History", "Map", "Insights", "AdvancedAnalytics", "TripHistory", "Settings", "StartTrip", "PredictiveSuggestions" -> {
                 if (currentScreen == "Map" && mapOrigin == NavOrigin.DETAIL) {
                     currentScreen = "Detail"
                     mapOrigin = NavOrigin.HOME
                 } else if (currentScreen == "Map" && mapOrigin == NavOrigin.TRIP_DETAIL) {
                     currentScreen = "TripDetail"
                     mapOrigin = NavOrigin.HOME
+                } else if (currentScreen == "PredictiveSuggestions") {
+                    currentScreen = "AdvancedAnalytics"
                 } else {
                     currentScreen = "Home"
                 }
@@ -574,6 +577,28 @@ fun MainScreen(
                 },
                 onViewTripReview = {
                     currentScreen = "TripReview"
+                },
+                onViewPredictiveSuggestions = {
+                    currentScreen = "PredictiveSuggestions"
+                }
+            )
+            "PredictiveSuggestions" -> PredictiveSuggestionsScreen(
+                viewModel = viewModel,
+                onBack = { handleBack() },
+                onViewMatchingLogs = { logIds, title ->
+                    selectedPatternInsight = PatternInsight(
+                        title = title,
+                        subtitle = "Historically productive",
+                        category = "Suggested",
+                        catchCount = 0,
+                        noCatchCount = 0,
+                        observationCount = logIds.size,
+                        catchRate = 0.0,
+                        confidenceLabel = "Suggested",
+                        matchingLogIds = logIds,
+                        patternType = PatternType.TOP_PATTERN
+                    )
+                    currentScreen = "PatternDetail"
                 }
             )
             "AdvancedReports" -> {
@@ -1033,7 +1058,7 @@ fun DashboardGrid(
             item {
                 HomeCard(
                     title = "Advanced Analytics",
-                    subtitle = "AI & deeper patterns",
+                    subtitle = "Deep Pattern Analysis",
                     icon = Icons.Default.AutoAwesome,
                     badge = FeatureGate.paidLabel(PaidFeature.ADVANCED_ANALYTICS),
                     onClick = onAdvancedAnalyticsClick,

@@ -34,7 +34,8 @@ fun AdvancedAnalyticsScreen(
     onBack: () -> Unit,
     onInsightClick: (PatternInsight) -> Unit,
     onViewReports: (PatternEngineFilters) -> Unit,
-    onViewTripReview: () -> Unit
+    onViewTripReview: () -> Unit,
+    onViewPredictiveSuggestions: () -> Unit
 ) {
     val catches by viewModel.allCatches.collectAsState()
     val trips by viewModel.allTrips.collectAsState()
@@ -151,10 +152,11 @@ fun AdvancedAnalyticsScreen(
                 onClick = { onViewTripReview() }
             )
 
-            AnalyticsPlaceholderCard(
-                title = "Predictive Suggestions",
-                description = "Use your history to suggest likely productive conditions and locations.",
-                icon = Icons.Default.Lightbulb
+            AnalyticsActionCard(
+                title = "Suggested Setups",
+                description = "Pattern-based suggestions from your saved catches and no-catches.",
+                icon = Icons.Default.Lightbulb,
+                onClick = onViewPredictiveSuggestions
             )
 
             Spacer(modifier = Modifier.height(32.dp))
