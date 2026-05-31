@@ -92,7 +92,7 @@ fun ReportBucketRow(bucket: ReportBucket, onClick: () -> Unit) {
         )
         
         Text(
-            text = "${bucket.catchCount} C · ${bucket.noCatchCount} NC · ${bucket.observationCount} obs",
+            text = "${bucket.catchCount} Catch · ${bucket.noCatchCount} No-Catch · ${bucket.observationCount} Observations",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 2.dp)
