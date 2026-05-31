@@ -19,7 +19,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.fishlog.app"
+        applicationId = "com.fishlogapp.mobile"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

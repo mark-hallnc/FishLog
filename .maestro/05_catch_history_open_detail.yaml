@@ -1,4 +1,4 @@
-appId: com.fishlog.app
+appId: com.fishlogapp.mobile
 ---
 - launchApp
 - runFlow:

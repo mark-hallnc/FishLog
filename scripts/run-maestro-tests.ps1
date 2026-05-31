@@ -4,5 +4,5 @@ if (!(Get-Command maestro -ErrorAction SilentlyContinue)) {
   exit 1
 }
 
-Write-Host "Starting Maestro tests for com.fishlog.app..."
+Write-Host "Starting Maestro tests for com.fishlogapp.mobile..."
 maestro test .maestro
