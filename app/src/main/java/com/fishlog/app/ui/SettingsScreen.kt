@@ -250,6 +250,129 @@ fun SettingsScreen(
     var showReminderDialog by remember { mutableStateOf(false) }
     var showMapStyleDialog by remember { mutableStateOf(false) }
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
+    var showFeedbackDialog by remember { mutableStateOf(false) }
+
+    if (showFeedbackDialog) {
+        var userEmail by remember { mutableStateOf("") }
+        var comment by remember { mutableStateOf("") }
+        val maxCommentLength = 255
+        val isEmailValid = userEmail.isBlank() || (userEmail.contains("@") && userEmail.contains("."))
+        val canSend = comment.trim().isNotBlank() && isEmailValid
+
+        AlertDialog(
+            onDismissRequest = { showFeedbackDialog = false },
+            title = { Text("Send Feedback") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Tell us what you think, report a bug, or suggest an improvement.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    
+                    OutlinedTextField(
+                        value = userEmail,
+                        onValueChange = { userEmail = it },
+                        label = { Text("Your email address") },
+                        placeholder = { Text("Optional, for replies") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Column {
+                        OutlinedTextField(
+                            value = comment,
+                            onValueChange = { if (it.length <= maxCommentLength) comment = it },
+                            label = { Text("Comment") },
+                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                            singleLine = false,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Text(
+                            text = "${comment.length}/$maxCommentLength",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (comment.length >= maxCommentLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val packageInfo = try {
+                            context.packageManager.getPackageInfo(context.packageName, 0)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        val versionName = packageInfo?.versionName ?: "Unknown"
+
+                        val body = """
+                            From: ${if (userEmail.isBlank()) "Not provided" else userEmail}
+                            
+                            Feedback:
+                            $comment
+                            
+                            ---
+                            App: FishLog
+                            Version: $versionName
+                            Android: ${android.os.Build.VERSION.RELEASE}
+                            Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}
+                        """.trimIndent()
+
+                        val feedbackEmail = "fishlogapp.feedback@gmail.com"
+                        val subject = "FishLog Feedback"
+                        
+                        // Strategy 1: ACTION_SENDTO with encoded URI (Most reliable for filling body)
+                        val mailtoUri = Uri.parse(
+                            "mailto:$feedbackEmail" +
+                            "?subject=${Uri.encode(subject)}" +
+                            "&body=${Uri.encode(body)}"
+                        )
+                        val sendToIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                            data = mailtoUri
+                        }
+
+                        // Strategy 2: ACTION_SEND fallback (In case no app handles Strategy 1)
+                        val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "message/rfc822"
+                            putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(feedbackEmail))
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
+                            putExtra(android.content.Intent.EXTRA_TEXT, body)
+                        }
+                        
+                        try {
+                            // Try Strategy 1 first
+                            context.startActivity(android.content.Intent.createChooser(sendToIntent, "Send Feedback"))
+                            showFeedbackDialog = false
+                        } catch (e: Exception) {
+                            try {
+                                // Try Strategy 2
+                                context.startActivity(android.content.Intent.createChooser(sendIntent, "Send Feedback"))
+                                showFeedbackDialog = false
+                            } catch (e2: Exception) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("No email app found. You can email $feedbackEmail.")
+                                }
+                            }
+                        }
+                    },
+                    enabled = canSend,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Send Feedback")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFeedbackDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (showBackupFrequencyDialog) {
         AlertDialog(
@@ -1289,6 +1412,17 @@ fun SettingsScreen(
                 Text(
                     text = "FishLog stores your data on this device unless you choose to export or back it up.",
                     style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            // Support
+            SettingsSection(title = "Support") {
+                SettingRow(
+                    icon = Icons.Default.Feedback,
+                    title = "Send Feedback",
+                    subtitle = "Share comments, bugs, or suggestions.",
+                   // helperText = "Opens your email app so you can review before sending.",
+                    onClick = { showFeedbackDialog = true }
                 )
             }
 
