@@ -148,6 +148,7 @@ class MainActivity : ComponentActivity() {
 
             var activeTripReminderEnabled by remember { mutableStateOf(appPreferences.isActiveTripReminderEnabled()) }
             var activeTripReminderDelay by remember { mutableStateOf(appPreferences.getActiveTripReminderDelayHours()) }
+            var developerToolsEnabled by remember { mutableStateOf(appPreferences.isDeveloperToolsEnabled()) }
 
             val darkTheme = when (appearanceMode) {
                 AppPreferences.MODE_LIGHT -> false
@@ -168,6 +169,7 @@ class MainActivity : ComponentActivity() {
                     homePhotoSlideshowEnabled = homePhotoSlideshowEnabled,
                     activeTripReminderEnabled = activeTripReminderEnabled,
                     activeTripReminderDelay = activeTripReminderDelay,
+                    developerToolsEnabled = developerToolsEnabled,
                     onAppearanceModeChange = { mode ->
                         appearanceMode = mode
                         appPreferences.setAppearanceMode(mode)
@@ -204,6 +206,10 @@ class MainActivity : ComponentActivity() {
                         activeTripReminderEnabled = enabled
                         activeTripReminderDelay = delay
                         viewModel.updateActiveTripReminder(enabled, delay)
+                    },
+                    onDeveloperToolsEnabledChange = { enabled ->
+                        developerToolsEnabled = enabled
+                        appPreferences.setDeveloperToolsEnabled(enabled)
                     }
                 )
             }
@@ -224,6 +230,7 @@ fun MainScreen(
     homePhotoSlideshowEnabled: Boolean,
     activeTripReminderEnabled: Boolean,
     activeTripReminderDelay: Int,
+    developerToolsEnabled: Boolean,
     onAppearanceModeChange: (String) -> Unit,
     onUnitSystemChange: (String) -> Unit,
     onMapCenterModeChange: (String) -> Unit,
@@ -231,7 +238,8 @@ fun MainScreen(
     onClearDefaultMapLocation: () -> Unit,
     onMapStyleChange: (String) -> Unit,
     onHomePhotoSlideshowEnabledChange: (Boolean) -> Unit,
-    onActiveTripReminderChange: (Boolean, Int) -> Unit
+    onActiveTripReminderChange: (Boolean, Int) -> Unit,
+    onDeveloperToolsEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val appPreferences = remember { AppPreferences(context) }
@@ -688,6 +696,7 @@ fun MainScreen(
                 homePhotoSlideshowEnabled = homePhotoSlideshowEnabled,
                 activeTripReminderEnabled = activeTripReminderEnabled,
                 activeTripReminderDelay = activeTripReminderDelay,
+                developerToolsEnabled = developerToolsEnabled,
                 onAppearanceModeChange = onAppearanceModeChange,
                 onUnitSystemChange = onUnitSystemChange,
                 onMapCenterModeChange = onMapCenterModeChange,
@@ -703,6 +712,7 @@ fun MainScreen(
                 onMapStyleChange = onMapStyleChange,
                 onHomePhotoSlideshowEnabledChange = onHomePhotoSlideshowEnabledChange,
                 onActiveTripReminderChange = onActiveTripReminderChange,
+                onDeveloperToolsEnabledChange = onDeveloperToolsEnabledChange,
                 onBack = { handleBack() }
             )
         }

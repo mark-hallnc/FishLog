@@ -39,6 +39,7 @@ class AppPreferences(context: Context) {
         private const val KEY_REMINDER_DELAY = "active_trip_reminder_delay_hours"
         private const val KEY_HOME_PHOTO_SLIDESHOW_ENABLED = "home_photo_slideshow_enabled"
         private const val KEY_CLOUD_BACKUP_FREQUENCY = "cloud_backup_frequency"
+        private const val KEY_DEVELOPER_TOOLS_ENABLED = "developer_tools_enabled"
 
         const val MAP_CENTER_CURRENT = "CURRENT_LOCATION"
         const val MAP_CENTER_SAVED = "SAVED_LOCATION"
@@ -297,5 +298,13 @@ class AppPreferences(context: Context) {
             CLOUD_BACKUP_FREQUENCY_DAILY -> "Daily"
             else -> "Every 6 hours"
         }
+    }
+
+    fun isDeveloperToolsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_DEVELOPER_TOOLS_ENABLED, false)
+    }
+
+    fun setDeveloperToolsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DEVELOPER_TOOLS_ENABLED, enabled).apply()
     }
 }

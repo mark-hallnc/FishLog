@@ -47,6 +47,7 @@ fun SettingsScreen(
     homePhotoSlideshowEnabled: Boolean,
     activeTripReminderEnabled: Boolean,
     activeTripReminderDelay: Int,
+    developerToolsEnabled: Boolean,
     onAppearanceModeChange: (String) -> Unit,
     onUnitSystemChange: (String) -> Unit,
     onMapCenterModeChange: (String) -> Unit,
@@ -57,6 +58,7 @@ fun SettingsScreen(
     onMapStyleChange: (String) -> Unit,
     onHomePhotoSlideshowEnabledChange: (Boolean) -> Unit,
     onActiveTripReminderChange: (Boolean, Int) -> Unit,
+    onDeveloperToolsEnabledChange: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -251,6 +253,7 @@ fun SettingsScreen(
     var showMapStyleDialog by remember { mutableStateOf(false) }
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
+    var developerTapCount by remember { mutableIntStateOf(0) }
 
     if (showFeedbackDialog) {
         var userEmail by remember { mutableStateOf("") }
@@ -1341,80 +1344,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Developer Tools
-            SettingsSection(title = "Developer Tools") {
-                Text(
-                    text = "Adds about 100 realistic test logs across 30+ trips for analytics testing. All dates are before today.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.seedSampleData { result ->
-                                scope.launch { snackbarHostState.showSnackbar(result) }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Seed Rich Sample Data", fontSize = 12.sp)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.removeSampleData { result ->
-                                scope.launch { snackbarHostState.showSnackbar(result) }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Clear Sample Data", fontSize = 12.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        onResetWelcomeScreen()
-                        scope.launch { snackbarHostState.showSnackbar("Welcome screen reset. It will appear on next launch.") }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Reset Welcome Screen", fontSize = 12.sp)
-                }
-            }
-
-            // About
-            SettingsSection(title = "About FishLog") {
-                SettingRow(
-                    title = "App Name",
-                    subtitle = "FishLog"
-                )
-                SettingRow(
-                    title = "Version",
-                    subtitle = "Development build"
-                )
-                SettingRow(
-                    title = "Data model",
-                    subtitle = "Local-first"
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Privacy note:",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "FishLog stores your data on this device unless you choose to export or back it up.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
             // Support
             SettingsSection(title = "Support") {
                 SettingRow(
@@ -1453,6 +1382,125 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Delete All Trips & Logs")
                         }
+                    }
+                }
+            }
+
+            // App Info
+            SettingsSection(title = "App Info") {
+                val packageInfo = remember {
+                    try {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                val versionName = packageInfo?.versionName ?: "Development build"
+                
+                SettingRow(
+                    title = "Version",
+                    subtitle = versionName,
+                    helperText = "Tap 7 times to unlock Developer Tools.",
+                    onClick = {
+                        if (developerToolsEnabled) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Developer Tools already enabled")
+                            }
+                        } else {
+                            developerTapCount++
+                            if (developerTapCount in 4..6) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("${7 - developerTapCount} taps away from Developer Tools")
+                                }
+                            } else if (developerTapCount >= 7) {
+                                onDeveloperToolsEnabledChange(true)
+                                developerTapCount = 0
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Developer Tools enabled")
+                                }
+                            }
+                        }
+                    }
+                )
+                SettingRow(
+                    title = "Data model",
+                    subtitle = "Local-first"
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Privacy note:",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "FishLog stores your data on this device unless you choose to export or back it up.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            // Developer Tools (Conditional)
+            // Developer Tools are hidden to avoid clutter/confusion. This is not a security boundary.
+            if (developerToolsEnabled) {
+                SettingsSection(title = "Developer Tools") {
+                    Text(
+                        text = "Testing utilities. Not intended for normal app use.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.seedSampleData { result ->
+                                    scope.launch { snackbarHostState.showSnackbar(result) }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Seed Rich Sample Data", fontSize = 12.sp)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.removeSampleData { result ->
+                                    scope.launch { snackbarHostState.showSnackbar(result) }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Clear Sample Data", fontSize = 12.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            onResetWelcomeScreen()
+                            scope.launch { snackbarHostState.showSnackbar("Welcome screen reset. It will appear on next launch.") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Reset Welcome Screen", fontSize = 12.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            onDeveloperToolsEnabledChange(false)
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Developer Tools disabled")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("Disable Developer Tools", fontSize = 12.sp)
                     }
                 }
             }
