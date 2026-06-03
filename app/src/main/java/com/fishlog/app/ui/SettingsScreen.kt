@@ -1384,7 +1384,7 @@ fun SettingsScreen(
                 SettingRow(
                     title = "Version",
                     subtitle = versionName,
-                    helperText = "Tap 7 times to unlock Developer Tools.",
+                    //helperText = "Tap 7 times to unlock Developer Tools.",
                     onClick = {
                         if (developerToolsEnabled) {
                             scope.launch {
