@@ -25,8 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.data.*
-import com.fishlog.app.billing.FeatureGate
-import com.fishlog.app.billing.PaidFeature
 import com.fishlog.app.util.FormatUtils
 import kotlinx.coroutines.launch
 import java.io.BufferedWriter
@@ -889,7 +887,7 @@ fun SettingsScreen(
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 5. Cloud Backup (Future Premium)
+                // 5. Cloud Backup
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -905,16 +903,6 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("Cloud Backup", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                            SuggestionChip(
-                                onClick = { },
-                                label = { Text(FeatureGate.paidLabel(PaidFeature.CLOUD_BACKUP), fontSize = 10.sp) },
-                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
                         }
                         
                         Text(
@@ -1254,10 +1242,6 @@ fun SettingsScreen(
                             val isOperationInProgress = viewModel.backupUiState == BackupUiState.BACKUP_IN_PROGRESS || 
                                                       viewModel.backupUiState == BackupUiState.RESTORE_IN_PROGRESS
 
-                            /**
-                             * TODO: Gate these buttons behind real premium entitlement check.
-                             * For now, they remain placeholders for development.
-                             */
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(
                                     onClick = { viewModel.backupNow() },

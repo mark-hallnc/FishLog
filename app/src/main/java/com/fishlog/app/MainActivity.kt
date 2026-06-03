@@ -69,8 +69,6 @@ import com.fishlog.app.analytics.PatternEngine
 import com.fishlog.app.ui.DateRangeFilter
 import com.fishlog.app.ui.LogTypeFilter
 import com.fishlog.app.ui.MapReturnState
-import com.fishlog.app.billing.PaidFeature
-import com.fishlog.app.billing.FeatureGate
 
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -1070,7 +1068,6 @@ fun DashboardGrid(
                     title = "Advanced Analytics",
                     subtitle = "Deep Pattern Analysis",
                     icon = Icons.Default.AutoAwesome,
-                    badge = FeatureGate.paidLabel(PaidFeature.ADVANCED_ANALYTICS),
                     onClick = onAdvancedAnalyticsClick,
                     modifier = Modifier.testTag("home_advanced_analytics_card")
                 )

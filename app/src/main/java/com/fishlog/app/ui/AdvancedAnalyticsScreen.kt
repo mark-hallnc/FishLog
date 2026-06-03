@@ -22,8 +22,6 @@ import com.fishlog.app.analytics.PatternEngine
 import com.fishlog.app.analytics.PatternEngineFilters
 import com.fishlog.app.analytics.PatternEngineResult
 import com.fishlog.app.analytics.PatternInsight
-import com.fishlog.app.billing.FeatureGate
-import com.fishlog.app.billing.PaidFeature
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -74,20 +72,7 @@ fun AdvancedAnalyticsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Advanced Analytics")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        SuggestionChip(
-                            onClick = { },
-                            label = { Text(FeatureGate.paidLabel(PaidFeature.ADVANCED_ANALYTICS), fontSize = 10.sp) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
+                    Text("Advanced Analytics")
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

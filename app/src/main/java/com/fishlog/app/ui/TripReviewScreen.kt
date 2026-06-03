@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fishlog.app.analytics.TripReview
 import com.fishlog.app.analytics.TripReviewEngine
-import com.fishlog.app.billing.FeatureGate
-import com.fishlog.app.billing.PaidFeature
 import com.fishlog.app.data.CatchLog
 import com.fishlog.app.data.FishingTrip
 import java.text.SimpleDateFormat
@@ -56,20 +54,7 @@ fun TripReviewScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Trip Review")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        SuggestionChip(
-                            onClick = { },
-                            label = { Text(FeatureGate.paidLabel(PaidFeature.ADVANCED_ANALYTICS), fontSize = 10.sp) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
+                    Text("Trip Review")
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
