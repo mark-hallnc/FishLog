@@ -1385,6 +1385,7 @@ fun SettingsScreen(
                     title = "Version",
                     subtitle = versionName,
                     //helperText = "Tap 7 times to unlock Developer Tools.",
+                    showChevron = false,
                     onClick = {
                         if (developerToolsEnabled) {
                             scope.launch {
@@ -1563,6 +1564,7 @@ fun SettingRow(
     subtitle: String,
     icon: ImageVector? = null,
     helperText: String? = null,
+    showChevron: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
     val clickableModifier = if (onClick != null) {
@@ -1595,7 +1597,7 @@ fun SettingRow(
                 Text(text = helperText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             }
         }
-        if (onClick != null) {
+        if (onClick != null && showChevron) {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
