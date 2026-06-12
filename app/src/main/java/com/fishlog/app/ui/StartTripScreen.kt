@@ -116,6 +116,40 @@ fun StartTripScreen(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Location Helper Tip (Only if permission not granted)
+            if (!hasPermission) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Location helps FishLog",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Nearby water bodies and weather auto-fill work best with location enabled. You can still start a trip without it.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Button(
+                            onClick = {
+                                permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text("Enable Location", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+
             // 1. Trip Info
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -203,7 +237,7 @@ fun StartTripScreen(
                                         weatherMessage = result.exceptionOrNull()?.message ?: "Weather response could not be read."
                                     }
                                 } else {
-                                    weatherMessage = "Enable GPS and wait for location to auto-fill weather."
+                                    weatherMessage = "Enable location to auto-fill weather."
                                 }
                                 isWeatherLoading = false
                             }
